@@ -1,0 +1,586 @@
+// @ts-nocheck
+// TODO: Remove ts-nocheck after running `payload generate:types` with live database
+import type { Metadata } from "next";
+import { getPayload } from "payload";
+import config from "@payload-config";
+import { notFound } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { WILCO_SITE_ID, SITE_URL, SITE_NAME } from "@/lib/site-config";
+import { generateNewsArticleSchema } from "@/lib/schema";
+import { BreadcrumbBar } from "@/components/wilco/BreadcrumbBar";
+import { ArticleSponsorBanner } from "@/components/wilco/ArticleSponsorBanner";
+import { CategoryTag } from "@/components/wilco/CategoryTag";
+import { InlineAd } from "@/components/wilco/InlineAd";
+import { ArticleCardGrid } from "@/components/wilco/ArticleCardGrid";
+import { SponsorWidget } from "@/components/wilco/SponsorWidget";
+import { SidebarSubscribe } from "@/components/wilco/SidebarSubscribe";
+import { SidebarGrindPromo } from "@/components/wilco/SidebarGrindPromo";
+import { NewsletterBanner } from "@/components/wilco/NewsletterBanner";
+import { ShareBar } from "@/components/wilco/ShareBar";
+import { RichText } from "@payloadcms/richtext-lexical/react";
+import type {
+	Article,
+	Category,
+	Media,
+	Location as LocationType,
+	Business,
+	Sponsor,
+} from "@/payload-types";
+
+async function getArticleBySlug(slug: string) {
+	try {
+		const payload = await getPayload({ config });
+		const result = await payload.find({
+			collection: "articles",
+			where: {
+				slug: { equals: slug },
+				status: { equals: "published" },
+			},
+			limit: 1,
+			depth: 2,
+		});
+		return result.docs[0] || null;
+	} catch (error) {
+		console.error("Error fetching article:", error);
+		return null;
+	}
+}
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+	const { slug } = await params;
+	const article = await getArticleBySlug(slug);
+	if (!article) return { title: "Article Not Found | WilCo Guide" };
+
+	const featuredImage =
+		typeof article.featuredImage === "object"
+			? (article.featuredImage as Media)
+			: null;
+	const category =
+		typeof article.category === "object"
+			? (article.category as Category)
+			: null;
+
+	return {
+		title: article.seo?.metaTitle || `${article.title} | ${SITE_NAME}`,
+		description: article.seo?.metaDescription || article.excerpt,
+		openGraph: {
+			title: article.title,
+			description: article.excerpt,
+			type: "article",
+			publishedTime: article.publishedAt || undefined,
+			section: category?.name,
+			images: featuredImage?.url
+				? [{ url: featuredImage.url, width: 1200, height: 630 }]
+				: [],
+			siteName: SITE_NAME,
+		},
+		twitter: { card: "summary_large_image" },
+		alternates: { canonical: `${SITE_URL}/news/${article.slug}` },
+	};
+}
+
+export default async function ArticlePage({
+	params,
+}: {
+	params: Promise<{ slug: string }>;
+}) {
+	const { slug } = await params;
+	const payload = await getPayload({ config });
+	const article = await getArticleBySlug(slug);
+
+	if (!article) notFound();
+
+	const category =
+		typeof article.category === "object"
+			? (article.category as Category)
+			: null;
+	const featuredImage =
+		typeof article.featuredImage === "object"
+			? (article.featuredImage as Media)
+			: null;
+	const locations = ((article as any).locations || [])
+		.map((l: any) => (typeof l === "object" ? (l as LocationType) : null))
+		.filter(Boolean) as LocationType[];
+	const relatedBusinesses = ((article as any).relatedBusinesses || [])
+		.map((b: any) => (typeof b === "object" ? (b as Business) : null))
+		.filter(Boolean) as Business[];
+
+	const publishedDate = article.publishedAt
+		? new Date(article.publishedAt).toLocaleDateString("en-US", {
+				month: "long",
+				day: "numeric",
+				year: "numeric",
+			})
+		: "";
+
+	// Fetch related articles and sponsors in parallel
+	const [relatedResult, sponsorsResult, moreResult] = await Promise.all([
+		// Related articles by category
+		payload.find({
+			collection: "articles",
+			where: {
+				status: { equals: "published" },
+				...(category ? { category: { equals: category.id } } : {}),
+			},
+			sort: "-publishedAt",
+			limit: 5,
+			depth: 2,
+		}),
+		// Sponsors
+		payload
+			.find({
+				collection: "sponsors",
+				where: {
+					status: { equals: "active" },
+				},
+				limit: 10,
+				depth: 1,
+			})
+			.catch(() => ({ docs: [] })),
+		// More articles
+		payload.find({
+			collection: "articles",
+			where: {
+				status: { equals: "published" },
+			},
+			sort: "-publishedAt",
+			limit: 4,
+			depth: 2,
+		}),
+	]);
+
+	const relatedArticles = relatedResult.docs;
+	const moreArticles = moreResult.docs;
+
+	// Find sponsors by placement
+	const presentingSponsor: any =
+		sponsorsResult.docs.find((s: any) =>
+			s.placements?.some(
+				(p: any) =>
+					(p.page === "article-detail" || p.page === "all") &&
+					p.position === "presenting" &&
+					p.isActive,
+			),
+		) ||
+		sponsorsResult.docs.find((s: any) =>
+			s.placements?.some(
+				(p: any) =>
+					(p.page === "news" || p.page === "all") &&
+					p.position === "presenting" &&
+					p.isActive,
+			),
+		) ||
+		null;
+
+	const sidebarSponsors: any[] = sponsorsResult.docs.filter((s: any) =>
+		s.placements?.some(
+			(p: any) =>
+				(p.page === "article-detail" || p.page === "all") &&
+				p.position === "sidebar-featured" &&
+				p.isActive,
+		),
+	);
+
+	const inlineSponsor: any =
+		sponsorsResult.docs.find((s: any) =>
+			s.placements?.some(
+				(p: any) =>
+					(p.page === "article-detail" || p.page === "all") &&
+					p.position === "inline-feed" &&
+					p.isActive,
+			),
+		) || null;
+
+	// Breadcrumb items
+	const breadcrumbs = [
+		{ label: "WilCo Guide", href: "/" },
+		{ label: "News", href: "/news" },
+		...(category
+			? [
+					{
+						label: category.name,
+						href: `/news?category=${category.slug}`,
+					},
+				]
+			: []),
+		{
+			label:
+				article.title.length > 50
+					? article.title.slice(0, 50) + "..."
+					: article.title,
+		},
+	];
+
+	// JSON-LD schema
+	const articleSchema = generateNewsArticleSchema(article as any);
+
+	return (
+		<>
+			<script
+				type='application/ld+json'
+				dangerouslySetInnerHTML={{
+					__html: JSON.stringify(articleSchema),
+				}}
+			/>
+
+			{/* Breadcrumb */}
+			<BreadcrumbBar items={breadcrumbs} />
+
+			<div className='max-w-article mx-auto px-4 md:px-6 py-6 md:py-8'>
+				<div className='grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-9 items-start'>
+					{/* ═══════ ARTICLE CONTENT ═══════ */}
+					<div className='min-w-0'>
+						{/* Presenting Sponsor Banner */}
+						<ArticleSponsorBanner sponsor={presentingSponsor} />
+
+						{/* Article Header */}
+						<div className='mb-7'>
+							{category && (
+								<div className='mb-3'>
+									<CategoryTag category={category} />
+								</div>
+							)}
+
+							<h1 className='font-serif font-bold text-[26px] md:text-[34px] leading-[1.2] text-text-primary mb-[14px]'>
+								{article.title}
+							</h1>
+
+							<p className='text-[15px] md:text-[17px] leading-[1.55] text-text-secondary mb-4'>
+								{article.excerpt}
+							</p>
+
+							{/* Meta */}
+							<div className='flex items-center gap-[14px] flex-wrap text-[13px] text-text-muted'>
+								<span className='flex items-center gap-[5px]'>
+									<svg
+										width='14'
+										height='14'
+										viewBox='0 0 24 24'
+										fill='none'
+										stroke='currentColor'
+										strokeWidth='2'
+									>
+										<rect
+											x='3'
+											y='4'
+											width='18'
+											height='18'
+											rx='2'
+											ry='2'
+										/>
+										<line
+											x1='16'
+											y1='2'
+											x2='16'
+											y2='6'
+										/>
+										<line
+											x1='8'
+											y1='2'
+											x2='8'
+											y2='6'
+										/>
+										<line
+											x1='3'
+											y1='10'
+											x2='21'
+											y2='10'
+										/>
+									</svg>
+									{publishedDate}
+								</span>
+								<div className='w-[3px] h-[3px] rounded-full bg-border' />
+								<span className='flex items-center gap-[5px]'>
+									<svg
+										width='14'
+										height='14'
+										viewBox='0 0 24 24'
+										fill='none'
+										stroke='currentColor'
+										strokeWidth='2'
+									>
+										<circle
+											cx='12'
+											cy='12'
+											r='10'
+										/>
+										<polyline points='12 6 12 12 16 14' />
+									</svg>
+									{article.readTime || 3} min read
+								</span>
+								{locations.map((loc) => (
+									<span key={loc.id}>
+										<div className='w-[3px] h-[3px] rounded-full bg-border inline-block mr-[14px]' />
+										<span className='inline-flex items-center gap-1 py-[3px] px-[10px] rounded-md bg-blue-light text-blue text-[11px] font-semibold border border-blue-border'>
+											<svg
+												width='11'
+												height='11'
+												viewBox='0 0 24 24'
+												fill='none'
+												stroke='currentColor'
+												strokeWidth='2.5'
+											>
+												<path d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z' />
+												<circle
+													cx='12'
+													cy='10'
+													r='3'
+												/>
+											</svg>
+											{loc.name}
+										</span>
+									</span>
+								))}
+							</div>
+
+							{/* Share bar */}
+							<ShareBar
+								slug={article.slug}
+								title={article.title}
+							/>
+						</div>
+
+						{/* Featured Image */}
+						{featuredImage?.url && (
+							<div className='mb-8'>
+								<div className='w-full rounded-lg overflow-hidden aspect-video'>
+									<Image
+										src={featuredImage.url}
+										alt={featuredImage.alt || article.title}
+										width={1200}
+										height={675}
+										quality={60}
+										priority
+										className='w-full h-full object-cover'
+									/>
+								</div>
+								{featuredImage.credit && (
+									<p className='text-[11px] text-text-muted italic mt-2'>
+										{featuredImage.credit}
+									</p>
+								)}
+							</div>
+						)}
+
+						{/* Article Body */}
+						<div className='article-body'>
+							<RichText data={article.content} />
+						</div>
+
+						{/* Inline Ad (after body) */}
+						<InlineAd sponsor={inlineSponsor} />
+
+						{/* Tags */}
+						{category && (
+							<div className='flex flex-wrap gap-[6px] mt-8 pt-5 border-t border-border-light'>
+								<Link
+									href={`/news?category=${category.slug}`}
+									className='py-1 px-3 rounded-md text-xs font-medium bg-blue-light text-blue border border-blue-border no-underline hover:bg-blue hover:text-white transition-colors'
+								>
+									{category.name}
+								</Link>
+								{locations.map((loc) => (
+									<Link
+										key={loc.id}
+										href={`/news?location=${loc.slug}`}
+										className='py-1 px-3 rounded-md text-xs font-medium bg-blue-light text-blue border border-blue-border no-underline hover:bg-blue hover:text-white transition-colors'
+									>
+										{loc.name}
+									</Link>
+								))}
+							</div>
+						)}
+
+						{/* Related Businesses */}
+						{relatedBusinesses.length > 0 && (
+							<div className='mt-10 pt-7 border-t-2 border-text-primary'>
+								<h2 className='font-serif font-bold text-xl mb-4'>
+									Mentioned in This Story
+								</h2>
+								<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[14px]'>
+									{relatedBusinesses.map((biz) => {
+										const bizCategories = (
+											biz.categories || []
+										)
+											.map((c) =>
+												typeof c === "object"
+													? (c as Category)
+													: null,
+											)
+											.filter(Boolean) as Category[];
+
+										return (
+											<div
+												key={biz.id}
+												className='bg-white border-[1.5px] border-border rounded-card p-[18px] transition-all hover:border-blue hover:shadow-md hover:-translate-y-[2px] cursor-pointer'
+											>
+												<div className='flex items-center gap-3 mb-[10px]'>
+													<div className='w-11 h-11 rounded-[10px] bg-bg border border-border-light flex items-center justify-center font-bold text-[13px] text-text-muted flex-shrink-0'>
+														{biz.name
+															.split(" ")
+															.map((w) => w[0])
+															.join("")
+															.slice(0, 2)}
+													</div>
+													<div>
+														<div className='text-sm font-bold'>
+															{biz.name}
+														</div>
+														<div className='text-[11px] text-text-muted'>
+															{bizCategories[0]
+																?.name || ""}
+														</div>
+													</div>
+												</div>
+												{biz.rating && (
+													<div className='flex items-center gap-1 text-xs mb-2'>
+														<span className='text-yellow'>
+															{"★".repeat(
+																Math.round(
+																	biz.rating,
+																),
+															)}
+															{"☆".repeat(
+																5 -
+																	Math.round(
+																		biz.rating,
+																	),
+															)}
+														</span>
+														<span>
+															{biz.rating}
+														</span>
+														{biz.reviewCount && (
+															<span className='text-text-muted'>
+																(
+																{biz.reviewCount.toLocaleString()}{" "}
+																reviews)
+															</span>
+														)}
+													</div>
+												)}
+												{biz.address?.street && (
+													<div className='text-xs text-text-secondary mb-[10px]'>
+														{biz.address.street},{" "}
+														{biz.address.city},{" "}
+														{biz.address.state}
+													</div>
+												)}
+												<Link
+													href={`/directory/${biz.slug}`}
+													className='text-xs font-bold text-blue no-underline hover:underline flex items-center gap-1'
+												>
+													View Profile →
+												</Link>
+											</div>
+										);
+									})}
+								</div>
+							</div>
+						)}
+
+						{/* More from WilCo Guide */}
+						{moreArticles.length > 0 && (
+							<div className='mt-10 pt-7 border-t-2 border-text-primary'>
+								<div className='flex items-center justify-between mb-4'>
+									<h2 className='font-serif font-bold text-xl'>
+										More from WilCo Guide
+									</h2>
+									<Link
+										href='/news'
+										className='text-[13px] font-semibold text-blue no-underline hover:underline flex items-center gap-1'
+									>
+										All News →
+									</Link>
+								</div>
+								<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
+									{moreArticles.map((article) => (
+										<ArticleCardGrid
+											key={article.id}
+											article={article}
+										/>
+									))}
+								</div>
+							</div>
+						)}
+
+						{/* Newsletter Banner */}
+						<NewsletterBanner />
+					</div>
+
+					{/* ═══════ SIDEBAR ═══════ */}
+					<aside className='lg:sticky lg:top-[72px] flex flex-col gap-5'>
+						{/* Sponsor Widget 1 */}
+						{sidebarSponsors[0] && (
+							<SponsorWidget sponsor={sidebarSponsors[0]} />
+						)}
+
+						{/* Subscribe CTA */}
+						<SidebarSubscribe />
+
+						{/* Related Stories */}
+						{relatedArticles.length > 0 && (
+							<div className='bg-white border border-border rounded-lg p-5'>
+								<h3 className='font-bold text-sm mb-[14px] pb-[10px] border-b-2 border-text-primary'>
+									Related Stories
+								</h3>
+								{relatedArticles.map((related, i) => {
+									const relCat =
+										typeof related.category === "object"
+											? (related.category as Category)
+											: null;
+									const relDate = related.publishedAt
+										? new Date(
+												related.publishedAt,
+											).toLocaleDateString("en-US", {
+												month: "short",
+												day: "numeric",
+											})
+										: "";
+									return (
+										<Link
+											key={related.id}
+											href={`/news/${related.slug}`}
+											className={`block py-3 no-underline ${i < relatedArticles.length - 1 ? "border-b border-border-light" : ""} ${i === 0 ? "pt-0" : ""}`}
+										>
+											{relCat && (
+												<div className='mb-1'>
+													<CategoryTag
+														category={relCat}
+													/>
+												</div>
+											)}
+											<div className='text-[13px] font-semibold leading-[1.4] text-text-primary hover:text-blue'>
+												{related.title}
+											</div>
+											<div className='text-[11px] text-text-muted mt-1'>
+												{relDate} ·{" "}
+												{related.readTime || 3} min
+											</div>
+										</Link>
+									);
+								})}
+							</div>
+						)}
+
+						{/* Sponsor Widget 2 */}
+						{sidebarSponsors[1] && (
+							<SponsorWidget
+								sponsor={sidebarSponsors[1]}
+								accentColor='#10b981'
+							/>
+						)}
+
+						{/* WilCo Grind Mini Promo */}
+						<SidebarGrindPromo />
+					</aside>
+				</div>
+			</div>
+		</>
+	);
+}
