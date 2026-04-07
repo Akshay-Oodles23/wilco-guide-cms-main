@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 import "@/styles/directory.css";
 import DirectorySpotlight from "@/components/wilco/DirectorySpotlight";
 import DirectoryFilters from "@/components/wilco/DirectoryFilters";
-
+import StarRating from "@/components/StarRating";
 /* ═══════════════════════════════════════
    DIRECTORY PAGE — WilCo Guide
    Matches "WilCo Guide - Directory Home Page.html" design.
@@ -59,6 +59,21 @@ function getImageUrl(media: any): string | null {
 	return null;
 }
 
+function toBusinessSlug(name: string): string {
+	return (name || "business")
+		.toLowerCase()
+		.replace(/[\u2019']/g, "")
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+}
+
+function getBusinessHref(business: any): string {
+	const slug =
+		business?.slug ||
+		toBusinessSlug(business?.name || business?.title || "business");
+	return `/directory/${slug}`;
+}
+
 export default async function DirectoryPage(props: {
 	searchParams: Promise<{
 		category?: string;
@@ -87,17 +102,29 @@ export default async function DirectoryPage(props: {
 	} catch (e) {
 		console.error("Directory: failed to fetch businesses", e);
 	}
+	// Try to fetch categories, but don't fail if collection doesn't exist
 	try {
 		const r = await payload.find({ collection: "categories", limit: 30 });
 		categories = r.docs || [];
 	} catch (e) {
-		console.error("Directory: failed to fetch categories", e);
+		console.warn(
+			"Directory: categories collection not found, using fallback",
+			e,
+		);
+		// Use empty array - categories will use fallback names below
+		categories = [];
 	}
+
+	// Try to fetch locations, but don't fail if collection doesn't exist
 	try {
 		const r = await payload.find({ collection: "locations", limit: 20 });
 		locations = r.docs || [];
 	} catch (e) {
-		console.error("Directory: failed to fetch locations", e);
+		console.warn(
+			"Directory: locations collection not found, using fallback",
+			e,
+		);
+		locations = [];
 	}
 
 	/* ═══ FILTER BUSINESSES ═══ */
@@ -287,6 +314,8 @@ export default async function DirectoryPage(props: {
 		filteredBusinesses.length >= 3
 			? filteredBusinesses.slice(0, 3).map((b: any) => ({
 					name: b.name || b.title || "Business",
+					slug: b.slug,
+					href: getBusinessHref(b),
 					category:
 						typeof b.category === "object"
 							? b.category?.name || "Business"
@@ -474,6 +503,8 @@ export default async function DirectoryPage(props: {
 				[
 					{
 						name: rightBusinesses[i].name || "Business",
+						slug: rightBusinesses[i].slug,
+						href: getBusinessHref(rightBusinesses[i]),
 						category:
 							typeof rightBusinesses[i].category === "object"
 								? rightBusinesses[i].category?.name
@@ -502,6 +533,8 @@ export default async function DirectoryPage(props: {
 					rightBusinesses[i + 1]
 						? {
 								name: rightBusinesses[i + 1].name || "Business",
+								slug: rightBusinesses[i + 1].slug,
+								href: getBusinessHref(rightBusinesses[i + 1]),
 								category:
 									typeof rightBusinesses[i + 1].category ===
 									"object"
@@ -903,7 +936,7 @@ export default async function DirectoryPage(props: {
 								.slice(0, 4)
 								.map((b: any, i: number) => (
 									<Link
-										href={`/directory/${b.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+										href={getBusinessHref(b)}
 										className='biz-card row-card'
 										key={i}
 										style={{ textDecoration: "none" }}
@@ -937,14 +970,10 @@ export default async function DirectoryPage(props: {
 												📍 {getBusinessLocation(b)}
 											</div>
 											<div className='card-rating'>
-												<span className='stars'>
-													{"★".repeat(
-														Math.round(
-															b.googleRating ||
-																4.5,
-														),
-													)}
-												</span>
+												<StarRating
+													rating={b.googleRating}
+													size='sm'
+												/>
 												<span className='rating-count'>
 													{b.googleRating || 4.5}
 												</span>
@@ -987,7 +1016,7 @@ export default async function DirectoryPage(props: {
 								.slice(0, 4)
 								.map((b: any, i: number) => (
 									<Link
-										href={`/directory/${b.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+										href={getBusinessHref(b)}
 										className='biz-card row-card'
 										key={i}
 										style={{ textDecoration: "none" }}
@@ -1021,14 +1050,18 @@ export default async function DirectoryPage(props: {
 												📍 {getBusinessLocation(b)}
 											</div>
 											<div className='card-rating'>
-												<span className='stars'>
+												{/* <span className='stars'>
 													{"★".repeat(
 														Math.round(
 															b.googleRating ||
 																4.5,
 														),
 													)}
-												</span>
+												</span> */}
+												<StarRating
+													rating={b.googleRating}
+													size='sm'
+												/>
 												<span className='rating-count'>
 													{b.googleRating || 4.5}
 												</span>
@@ -1069,7 +1102,7 @@ export default async function DirectoryPage(props: {
 								.slice(0, 8)
 								.map((b: any, i: number) => (
 									<Link
-										href={`/directory/${b.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+										href={getBusinessHref(b)}
 										className='biz-card row-card'
 										key={i}
 										style={{ textDecoration: "none" }}
@@ -1103,14 +1136,10 @@ export default async function DirectoryPage(props: {
 												📍 {getBusinessLocation(b)}
 											</div>
 											<div className='card-rating'>
-												<span className='stars'>
-													{"★".repeat(
-														Math.round(
-															b.googleRating ||
-																4.5,
-														),
-													)}
-												</span>
+												<StarRating
+													rating={b.googleRating}
+													size='sm'
+												/>
 												<span className='rating-count'>
 													{b.googleRating || 4.5}
 												</span>

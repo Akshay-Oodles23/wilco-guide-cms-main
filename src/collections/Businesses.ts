@@ -360,6 +360,238 @@ export const Businesses: CollectionConfig = {
 			},
 		},
 		{
+			name: "deals",
+			type: "array",
+			label: "Active Deals & Promotions",
+			admin: {
+				description: "Current deals and promotions for this business",
+			},
+			fields: [
+				{
+					name: "title",
+					type: "text",
+					label: "Deal Title",
+					required: true,
+				},
+				{
+					name: "description",
+					type: "textarea",
+					label: "Deal Description",
+				},
+				{
+					name: "discount",
+					type: "text",
+					label: "Discount (e.g., '15% off', 'Buy 1 Get 1')",
+				},
+				{
+					name: "validFrom",
+					type: "date",
+					label: "Valid From",
+				},
+				{
+					name: "validUntil",
+					type: "date",
+					label: "Valid Until",
+					required: true,
+				},
+				{
+					name: "conditions",
+					type: "text",
+					label: "Terms (e.g., 'Dine-in only')",
+				},
+				{
+					name: "image",
+					type: "upload",
+					relationTo: "media",
+					label: "Deal Image",
+				},
+			],
+		},
+		{
+			name: "jobs",
+			type: "array",
+			label: "Open Positions",
+			admin: {
+				description: "Currently hiring positions for this business",
+			},
+			fields: [
+				{
+					name: "title",
+					type: "text",
+					label: "Job Title",
+					required: true,
+				},
+				{
+					name: "type",
+					type: "select",
+					label: "Employment Type",
+					options: [
+						{ label: "Full-time", value: "full-time" },
+						{ label: "Part-time", value: "part-time" },
+						{ label: "Contract", value: "contract" },
+					],
+				},
+				{
+					name: "salary",
+					type: "text",
+					label: "Salary/Hourly Rate (e.g., '$18-22/hr')",
+				},
+				{
+					name: "description",
+					type: "textarea",
+					label: "Job Description",
+				},
+				{
+					name: "applyUrl",
+					type: "text",
+					label: "Application URL",
+				},
+			],
+		},
+		{
+			name: "menuItems",
+			type: "array",
+			label: "Popular Menu Items",
+			admin: {
+				description: "Featured menu items or products",
+			},
+			fields: [
+				{
+					name: "name",
+					type: "text",
+					label: "Item Name",
+					required: true,
+				},
+				{
+					name: "description",
+					type: "textarea",
+					label: "Description",
+				},
+				{
+					name: "price",
+					type: "text",
+					label: "Price",
+				},
+				{
+					name: "image",
+					type: "upload",
+					relationTo: "media",
+					label: "Item Image",
+				},
+			],
+		},
+		{
+			name: "upcomingEvents",
+			type: "array",
+			label: "Upcoming Events",
+			admin: {
+				description: "Events hosted by this business",
+			},
+			fields: [
+				{
+					name: "title",
+					type: "text",
+					label: "Event Title",
+					required: true,
+				},
+				{
+					name: "date",
+					type: "date",
+					label: "Event Date",
+					required: true,
+				},
+				{
+					name: "startTime",
+					type: "text",
+					label: "Start Time (e.g., '7:00 PM')",
+				},
+				{
+					name: "endTime",
+					type: "text",
+					label: "End Time (e.g., '10:00 PM')",
+				},
+				{
+					name: "description",
+					type: "textarea",
+					label: "Event Description",
+				},
+				{
+					name: "image",
+					type: "upload",
+					relationTo: "media",
+					label: "Event Image",
+				},
+			],
+		},
+		{
+			name: "socialMedia",
+			type: "group",
+			label: "Social Media",
+			fields: [
+				{
+					name: "instagram",
+					type: "text",
+					label: "Instagram Handle (e.g., '@rosalieskitchen')",
+				},
+				{
+					name: "facebook",
+					type: "text",
+					label: "Facebook URL",
+				},
+				{
+					name: "tiktok",
+					type: "text",
+					label: "TikTok Handle",
+				},
+				{
+					name: "twitter",
+					type: "text",
+					label: "Twitter Handle",
+				},
+			],
+		},
+		{
+			name: "relatedBusinesses",
+			type: "relationship",
+			relationTo: "businesses",
+			label: "Related/Similar Businesses",
+			hasMany: true,
+			admin: {
+				description:
+					"Businesses to show in 'You Might Also Like' section",
+			},
+		},
+		{
+			name: "tags",
+			type: "array",
+			label: "Business Tags/Badges",
+			admin: {
+				description:
+					"Tags and badges for highlighting special attributes",
+			},
+			fields: [
+				{
+					name: "label",
+					type: "text",
+					label: "Tag Label",
+					required: true,
+				},
+				{
+					name: "type",
+					type: "select",
+					label: "Tag Type",
+					options: [
+						{ label: "Deal", value: "deal" },
+						{ label: "Hiring", value: "hiring" },
+						{ label: "New", value: "new" },
+						{ label: "Event", value: "event" },
+						{ label: "Featured", value: "featured" },
+						{ label: "Approved", value: "approved" },
+					],
+				},
+			],
+		},
+		{
 			name: "featured",
 			type: "checkbox",
 			label: "Featured",

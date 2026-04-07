@@ -4,8 +4,10 @@ import { getPayload } from "payload";
 import config from "@payload-config";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "@/styles/home.css";
 import { HomeWidgetsFilter } from "@/components/wilco/HomeWidgetsFilter";
+import { LocationDropdown } from "@/components/wilco/LocationDropdown";
 
 /* ═══════════════════════════════════════
    HOME PAGE — WilCo Guide
@@ -179,8 +181,34 @@ function safeRender(value: any): string {
 
 /* ── Page Component ──────────────────── */
 
-export default async function HomePage() {
+export default function HomePage(props: {
+	searchParams: Promise<Record<string, string | undefined>>;
+}) {
+	return (
+		<Suspense fallback={<div className='min-h-screen bg-bg' />}>
+			<HomePageContent searchParamsPromise={props.searchParams} />
+		</Suspense>
+	);
+}
+
+async function HomePageContent({
+	searchParamsPromise,
+}: {
+	searchParamsPromise: Promise<Record<string, string | undefined>>;
+}) {
+	const searchParams = await searchParamsPromise;
 	const payload = await getPayload({ config });
+
+	// Build article filter based on selected location
+	const articleWhere: any = {
+		status: { equals: "published" },
+	};
+
+	if (searchParams.location) {
+		// Articles use 'city' field to filter by location
+		articleWhere.city = { equals: searchParams.location };
+		console.log("📍 News filter applied - City:", searchParams.location);
+	}
 
 	// Fetch all data with graceful error handling
 	let articles: any[] = [];
@@ -188,6 +216,7 @@ export default async function HomePage() {
 	let events: any[] = [];
 	let businesses: any[] = [];
 	let sponsors: any[] = [];
+	let locations: any[] = [];
 
 	try {
 		const r = await payload.find({
@@ -195,8 +224,9 @@ export default async function HomePage() {
 			limit: 12,
 			sort: "-publishedDate",
 			depth: 2,
+			where: articleWhere,
 		});
-		console.log("Fetched articles:", r.docs);
+		console.log("Fetched articles:", r.docs.length);
 		articles = r.docs || [];
 	} catch (e) {
 		console.error("Home: failed to fetch articles", e);
@@ -228,8 +258,16 @@ export default async function HomePage() {
 		const r = await payload.find({
 			collection: "businesses",
 			limit: 8,
-			depth: 1,
+			depth: 2,
 		});
+		console.log("✅ Fetched businesses:", r.docs.length, "items");
+		console.log(
+			"📸 Business images:",
+			r.docs.map(
+				(b: any) =>
+					`${b.name}: ${b.photos?.[0]?.photo?.url ? "✓" : "✗"}`,
+			),
+		);
 		businesses = r.docs || [];
 	} catch (e) {
 		console.error("Home: failed to fetch businesses", e);
@@ -247,6 +285,19 @@ export default async function HomePage() {
 	// 	console.error("Home: failed to fetch sponsors", e);
 	// }
 
+	// Fetch locations for secondary nav
+	try {
+		const r = await payload.find({
+			collection: "locations",
+			sort: "name",
+			limit: 20,
+		});
+		console.log("✅ Locations fetched:", r.docs.length);
+		locations = r.docs || [];
+	} catch (e) {
+		console.error("❌ Error fetching locations:", e);
+	}
+
 	// Slice data for different sections
 	const heroArticle = articles[0] || null;
 	const sidebarArticles = articles.slice(1, 6);
@@ -261,6 +312,11 @@ export default async function HomePage() {
 	return (
 		<>
 			<div className='home-page'>
+				{/* ═══════════════════════════════════════
+            LOCATION FILTER DROPDOWN
+            ═══════════════════════════════════════ */}
+				{/* <LocationDropdown locations={locations} /> */}
+
 				{/* ═══════════════════════════════════════
             HERO 3-COLUMN GRID — ABOVE THE FOLD
             ═══════════════════════════════════════ */}
@@ -607,9 +663,12 @@ export default async function HomePage() {
 
 						{/* Filterable Widgets — Client Component */}
 						<HomeWidgetsFilter
-							businesses={businesses
-								.slice(0, 8)
-								.map((b: any) => ({
+							businesses={businesses.slice(0, 8).map((b: any) => {
+								// Extract first photo from photos array
+								const firstPhoto = b.photos?.[0]?.photo;
+								const photoUrl = getImageUrl(firstPhoto);
+
+								return {
 									id: b.id,
 									name: b.name || b.title || "Business",
 									slug: b.slug || String(b.id),
@@ -617,14 +676,17 @@ export default async function HomePage() {
 										typeof b.category === "object"
 											? b.category?.name || "Business"
 											: b.category || "Business",
-									location: getLocationName(b),
-									image: getImageUrl(
-										b.featuredImage || b.image || b.logo,
-									),
-									rating: b.rating || null,
+									location:
+										b.address?.city || getLocationName(b),
+									image: photoUrl,
+									rating: b.googleRating || b.rating || null,
 									type: b.type || "business",
-									dealText: b.dealText || null,
-								}))}
+									dealText:
+										b.deals?.[0]?.discount ||
+										b.dealText ||
+										null,
+								};
+							})}
 						/>
 					</div>
 
