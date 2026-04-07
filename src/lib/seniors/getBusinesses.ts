@@ -11,7 +11,7 @@ function loadBusinesses(): any[] {
     const fileContents = fs.readFileSync(filePath, 'utf8')
     businesses = JSON.parse(fileContents)
   }
-  return businesses
+  return businesses || []
 }
 
 export function getBusinesses() {

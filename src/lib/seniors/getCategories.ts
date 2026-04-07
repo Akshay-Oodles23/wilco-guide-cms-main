@@ -11,7 +11,7 @@ function loadCategories(): any[] {
     const fileContents = fs.readFileSync(filePath, 'utf8')
     categories = JSON.parse(fileContents)
   }
-  return categories
+  return categories || []
 }
 
 export function getCategories() {

@@ -11,7 +11,7 @@ function loadCities(): any[] {
     const fileContents = fs.readFileSync(filePath, 'utf8')
     cities = JSON.parse(fileContents)
   }
-  return cities
+  return cities || []
 }
 
 export function getCities() {

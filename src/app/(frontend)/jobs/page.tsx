@@ -235,20 +235,21 @@ async function fetchSponsors(): Promise<Sponsor[]> {
 export default async function JobsPage({
 	searchParams,
 }: {
-	searchParams: { location?: string; search?: string };
+	searchParams: Promise<{ location?: string; search?: string }>;
 }) {
+	const params = await searchParams;
 	const jobs = await fetchJobs();
 	const businesses = await fetchBusinesses();
 	const sponsors = await fetchSponsors();
 
 	// Get selected location from URL
-	const selectedLocationSlug = searchParams.location || "";
+	const selectedLocationSlug = params.location || "";
 	const selectedLocationKeywords = selectedLocationSlug
 		? LOCATION_KEYWORDS[selectedLocationSlug]
 		: null;
 
 	// Get search query from URL
-	const searchQuery = searchParams.search || "";
+	const searchQuery = params.search || "";
 
 	// Use a fixed date for consistency (2 days ago from reference date)
 	// This prevents hydration mismatches caused by Date.now() differences between server and client

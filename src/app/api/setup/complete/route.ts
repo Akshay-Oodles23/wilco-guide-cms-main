@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
 		// Step 1: Create or get franchise
 		console.log("📝 Step 1: Setting up franchise...");
-		let franchise = null;
+		let franchise: any = null;
 
 		const existingFranchise = await payload.find({
 			collection: "franchises",

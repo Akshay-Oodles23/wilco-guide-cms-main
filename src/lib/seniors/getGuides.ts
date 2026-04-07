@@ -11,7 +11,7 @@ function loadGuides(): any[] {
     const fileContents = fs.readFileSync(filePath, 'utf8')
     guides = JSON.parse(fileContents)
   }
-  return guides
+  return guides || []
 }
 
 export function getGuides() {
