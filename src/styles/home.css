@@ -400,7 +400,7 @@ a:hover {
 
 .fw-img {
   width: 100%;
-  height: 100px;
+  height: 180px;
   overflow: hidden;
   position: relative;
 }
@@ -425,7 +425,7 @@ a:hover {
 }
 
 .fw-body {
-  padding: 10px 12px;
+  padding: 14px 12px;
 }
 
 .fw-name {

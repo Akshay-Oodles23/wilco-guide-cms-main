@@ -309,194 +309,37 @@ export default async function DirectoryPage(props: {
 					"Taylor",
 				];
 
-	/* Build spotlight data from CMS businesses or use static fallback */
-	const premiumSpotlight =
-		filteredBusinesses.length >= 3
-			? filteredBusinesses.slice(0, 3).map((b: any) => ({
-					name: b.name || b.title || "Business",
-					slug: b.slug,
-					href: getBusinessHref(b),
-					category:
-						typeof b.category === "object"
-							? b.category?.name || "Business"
-							: b.category || "Business",
-					priceRange: b.priceRange || "$$",
-					description: b.description || b.tagline || "",
-					location: getBusinessLocation(b), // ✅ CORRECT - gets address.city or location
-					rating: b.googleRating || 4.8,
-					reviewCount: b.googleReviewCount || "100+",
-					image:
-						getImageUrl(b.photos?.[0]?.photo) ||
-						getImageUrl(b.featuredImage || b.image || b.logo) ||
-						"https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80",
-					// tags: [] as {
-					// 	label: string;
-					// 	type: "deal" | "hiring" | "new" | "event" | "featured";
-					// }[],
-				}))
-			: [
-					{
-						name: "Rosalie's Kitchen & Bar",
-						category: "Italian Restaurant",
-						priceRange: "$$",
-						description:
-							"Handmade pasta, wood-fired pizzas, and craft cocktails in the heart of Leander. Family-owned since 2019.",
-						location: "Leander, TX",
-						rating: 4.8,
-						reviewCount: "312 reviews",
-						image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80",
-						// tags: [
-						// 	{ label: "Active Deal", type: "deal" as const },
-						// 	{ label: "Hiring", type: "hiring" as const },
-						// ],
-					},
-					{
-						name: "Summit Builders & Remodel",
-						category: "Home Services",
-						priceRange: "$$$",
-						description:
-							"Full-service home renovation, custom builds, and kitchen remodels. Licensed, insured, and locally owned.",
-						location: "Liberty Hill, TX",
-						rating: 4.9,
-						reviewCount: "189 reviews",
-						image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
-						// tags: [{ label: "Just Opened", type: "new" as const }],
-					},
-					{
-						name: "CrossFit WilCo",
-						category: "Fitness Center",
-						priceRange: "$$",
-						description:
-							"Strength, conditioning, and community. Open gym, personal training, and group classes for all levels.",
-						location: "Round Rock, TX",
-						rating: 4.9,
-						reviewCount: "247 reviews",
-						image: "https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800&q=80",
-						// tags: [
-						// 	{ label: "1st Month Free", type: "deal" as const },
-						// 	{
-						// 		label: "Hiring Trainers",
-						// 		type: "hiring" as const,
-						// 	},
-						// ],
-					},
-				];
+	/* Build spotlight data from ALL UNFILTERED businesses (no filters applied) */
+	const premiumSpotlight = businesses
+		.filter((b) => b.featured === true)
+		.slice(0, 3)
+		.map((b: any) => ({
+			name: b.name || b.title || "Business",
+			slug: b.slug,
+			href: getBusinessHref(b),
+			category:
+				typeof b.category === "object"
+					? b.category?.name || "Business"
+					: b.category || "Business",
+			priceRange: b.priceRange || "$$",
+			description: b.description || b.tagline || "",
+			location: getBusinessLocation(b),
+			rating: b.googleRating || 4.8,
+			reviewCount: b.googleReviewCount || "100+",
+			image:
+				getImageUrl(b.photos?.[0]?.photo) ||
+				getImageUrl(b.featuredImage || b.image || b.logo) ||
+				"https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80",
+		}));
 
-	/* Build right cards (2x2) from CMS or static */
+	/* Build right cards (2x2) from ALL UNFILTERED businesses (no filters applied) */
 	const generateRightCards = () => {
-		if (filteredBusinesses.length < 4) {
-			return [
-				[
-					{
-						name: "Iron Peak Gym",
-						category: "Fitness",
-						priceRange: "$$",
-						description: "",
-						location: "Cedar Park, TX",
-						rating: 4.9,
-						reviewCount: "",
-						image: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=600&q=80",
-						// tags: [{ label: "New", type: "new" as const }],
-					},
-					{
-						name: "Morning Grind Coffee",
-						category: "Coffee & Bakery",
-						priceRange: "$",
-						description: "",
-						location: "Cedar Park, TX",
-						rating: 4.8,
-						reviewCount: "",
-						image: "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=600&q=80",
-						// tags: [],
-					},
-				],
-				[
-					{
-						name: "Luxe Beauty Studio",
-						category: "Salon & Spa",
-						priceRange: "$$$",
-						description: "",
-						location: "Round Rock, TX",
-						rating: 4.7,
-						reviewCount: "",
-						image: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600&q=80",
-						// tags: [{ label: "20% Off", type: "deal" as const }],
-					},
-					{
-						name: "WilCo Animal Hospital",
-						category: "Veterinary",
-						priceRange: "$$",
-						description: "",
-						location: "Round Rock, TX",
-						rating: 4.9,
-						reviewCount: "",
-						image: "https://images.unsplash.com/photo-1552642986-ccb41e7059e7?w=600&q=80",
-						// tags: [
-						// 	{ label: "Free Consult", type: "deal" as const },
-						// ],
-					},
-				],
-				[
-					{
-						name: "The Hive Workspace",
-						category: "Coworking",
-						priceRange: "$$",
-						description: "",
-						location: "Leander, TX",
-						rating: 4.6,
-						reviewCount: "",
-						image: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=600&q=80",
-						// tags: [
-						// 	{
-						// 		label: "Hiring 3 Roles",
-						// 		type: "hiring" as const,
-						// 	},
-						// ],
-					},
-					{
-						name: "Westlake Legal Group",
-						category: "Law Firm",
-						priceRange: "$$$",
-						description: "",
-						location: "Cedar Park, TX",
-						rating: 4.8,
-						reviewCount: "",
-						image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80",
-						// tags: [],
-					},
-				],
-				[
-					{
-						name: "Pint House Craft",
-						category: "Bar & Grill",
-						priceRange: "$$",
-						description: "",
-						location: "Round Rock, TX",
-						rating: 4.5,
-						reviewCount: "",
-						image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80",
-						// tags: [
-						// 	{ label: "Event Tonight", type: "event" as const },
-						// ],
-					},
-					{
-						name: "Smoky Trail BBQ",
-						category: "BBQ & Smokehouse",
-						priceRange: "$$",
-						description: "",
-						location: "Liberty Hill, TX",
-						rating: 4.9,
-						reviewCount: "",
-						image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80",
-						// tags: [
-						// 	{ label: "Live Music Fri", type: "event" as const },
-						// ],
-					},
-				],
-			];
+		const rightBusinesses = businesses.slice(3, 11);
+
+		if (rightBusinesses.length === 0) {
+			return [];
 		}
-		// Use CMS data: slice 3-10 for right cards (2x2 grid = 4 cards)
-		const rightBusinesses = filteredBusinesses.slice(3, 11);
+
 		const result = [];
 		for (let i = 0; i < rightBusinesses.length; i += 2) {
 			result.push(
@@ -574,34 +417,7 @@ export default async function DirectoryPage(props: {
 				].filter(Boolean) as any,
 			);
 		}
-		return result.length > 0
-			? result
-			: [
-					[
-						{
-							name: "Iron Peak Gym",
-							category: "Fitness",
-							priceRange: "$$",
-							description: "",
-							location: "Cedar Park, TX",
-							rating: 4.9,
-							reviewCount: "",
-							image: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=600&q=80",
-							tags: [{ label: "New", type: "new" as const }],
-						},
-						{
-							name: "Morning Grind Coffee",
-							category: "Coffee & Bakery",
-							priceRange: "$",
-							description: "",
-							location: "Cedar Park, TX",
-							rating: 4.8,
-							reviewCount: "",
-							image: "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=600&q=80",
-							tags: [],
-						},
-					],
-				];
+		return result;
 	};
 
 	const rightCards = generateRightCards();
@@ -817,26 +633,40 @@ export default async function DirectoryPage(props: {
 						</div>
 					</div>
 
-					<div className='dir-hero-grid'>
-						{/* Premium Card (Left) */}
-						<DirectorySpotlight
-							businesses={premiumSpotlight}
-							cycleSpeed={6000}
-							isPremium={true}
-						/>
+					{premiumSpotlight.length > 0 ? (
+						<div className='dir-hero-grid'>
+							{/* Premium Card (Left) */}
+							<DirectorySpotlight
+								businesses={premiumSpotlight}
+								cycleSpeed={6000}
+								isPremium={true}
+							/>
 
-						{/* Right 2x2 Grid */}
-						<div className='hero-right'>
-							{rightCards.map((cardSet, i) => (
-								<DirectorySpotlight
-									key={i}
-									businesses={cardSet}
-									cycleSpeed={5000 + i * 1500}
-									isPremium={false}
-								/>
-							))}
+							{/* Right 2x2 Grid */}
+							{rightCards.length > 0 && (
+								<div className='hero-right'>
+									{rightCards.map((cardSet, i) => (
+										<DirectorySpotlight
+											key={i}
+											businesses={cardSet}
+											cycleSpeed={5000 + i * 1500}
+											isPremium={false}
+										/>
+									))}
+								</div>
+							)}
 						</div>
-					</div>
+					) : (
+						<div
+							style={{
+								padding: "20px",
+								textAlign: "center",
+								color: "#999",
+							}}
+						>
+							No featured businesses available.
+						</div>
+					)}
 				</div>
 
 				{/* ═══ ACTIVE DEALS STRIP ═══ */}

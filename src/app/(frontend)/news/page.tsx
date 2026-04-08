@@ -299,12 +299,18 @@ async function NewsPageContent({
 						<h3 className='text-sm font-bold text-text-primary mb-3 pb-2 border-b-2 border-text-primary'>
 							Latest
 						</h3>
-						{headlineArticles.map((article) => (
-							<ArticleCardHeadline
-								key={article.id}
-								article={article}
-							/>
-						))}
+						{headlineArticles.length > 0 ? (
+							headlineArticles.map((article) => (
+								<ArticleCardHeadline
+									key={article.id}
+									article={article}
+								/>
+							))
+						) : (
+							<div className='text-text-secondary text-sm py-4'>
+								No data found.
+							</div>
+						)}
 
 						{/* Events Widget */}
 						{eventsResult.docs.length > 0 && (
@@ -317,8 +323,12 @@ async function NewsPageContent({
 					{/* Center Column */}
 					<div className='min-w-0'>
 						{/* Hero Article */}
-						{displayHero && (
+						{displayHero ? (
 							<ArticleCardHero article={displayHero} />
+						) : (
+							<div className='text-text-secondary text-sm py-8 text-center'>
+								No data found.
+							</div>
 						)}
 
 						{/* Inline Subscribe CTA */}
@@ -329,16 +339,22 @@ async function NewsPageContent({
 							<h3 className='text-sm font-bold text-text-primary mb-3 pb-2 border-b-2 border-text-primary'>
 								Latest
 							</h3>
-							{headlineArticles.slice(0, 4).map((article) => (
-								<ArticleCardHeadline
-									key={article.id}
-									article={article}
-								/>
-							))}
+							{headlineArticles.slice(0, 4).length > 0 ? (
+								headlineArticles.slice(0, 4).map((article) => (
+									<ArticleCardHeadline
+										key={article.id}
+										article={article}
+									/>
+								))
+							) : (
+								<div className='text-text-secondary text-sm py-4'>
+									No data found.
+								</div>
+							)}
 						</div>
 
 						{/* Sub-stories */}
-						{subStories.length > 0 && (
+						{subStories.length > 0 ? (
 							<div className='mt-2'>
 								<h3 className='text-sm font-bold text-text-primary mb-2 pb-2 border-b-2 border-text-primary'>
 									More Stories
@@ -350,6 +366,10 @@ async function NewsPageContent({
 									/>
 								))}
 							</div>
+						) : (
+							<div className='text-text-secondary text-sm py-4 mt-2'>
+								No data found.
+							</div>
 						)}
 					</div>
 
@@ -358,12 +378,18 @@ async function NewsPageContent({
 						<h3 className='text-sm font-bold text-text-primary mb-3 pb-2 border-b-2 border-text-primary'>
 							Featured
 						</h3>
-						{featuredArticles.map((article) => (
-							<ArticleCardFeatured
-								key={article.id}
-								article={article}
-							/>
-						))}
+						{featuredArticles.length > 0 ? (
+							featuredArticles.map((article) => (
+								<ArticleCardFeatured
+									key={article.id}
+									article={article}
+								/>
+							))
+						) : (
+							<div className='text-text-secondary text-sm py-4'>
+								No data found.
+							</div>
+						)}
 
 						{/* Sponsor Widget */}
 						{sidebarSponsor && (
@@ -376,7 +402,7 @@ async function NewsPageContent({
 
 				{/* Mobile: Featured + Events (stacked below) */}
 				<div className='lg:hidden mt-6'>
-					{featuredArticles.length > 0 && (
+					{featuredArticles.length > 0 ? (
 						<>
 							<h3 className='text-sm font-bold text-text-primary mb-3 pb-2 border-b-2 border-text-primary'>
 								Featured
@@ -388,6 +414,10 @@ async function NewsPageContent({
 								/>
 							))}
 						</>
+					) : (
+						<div className='text-text-secondary text-sm py-4'>
+							No data found.
+						</div>
 					)}
 
 					{eventsResult.docs.length > 0 && (

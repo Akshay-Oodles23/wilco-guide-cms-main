@@ -20,18 +20,29 @@ export const metadata: Metadata = {
 		"Your home page for everything Williamson County. Local news, jobs, businesses, events, real estate, and deals — all in one place.",
 };
 
-/* ── Helpers ─────────────────────────── */
-
 function timeAgo(dateStr: string): string {
+	if (!dateStr) return "";
+
 	const now = new Date();
 	const date = new Date(dateStr);
+
+	// Check if date is valid
+	if (isNaN(date.getTime())) {
+		console.warn("⚠️ Invalid date format:", dateStr);
+		return "";
+	}
+
 	const diffMs = now.getTime() - date.getTime();
 	const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
 	const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
 	if (diffHrs < 1) return "Just now";
 	if (diffHrs < 24) return `${diffHrs} hour${diffHrs === 1 ? "" : "s"} ago`;
 	if (diffDays === 1) return "Yesterday";
-	return `${diffDays} days ago`;
+	if (diffDays < 30) return `${diffDays} days ago`;
+	if (diffDays < 365)
+		return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) === 1 ? "" : "s"} ago`;
+	return `${Math.floor(diffDays / 365)} year${Math.floor(diffDays / 365) === 1 ? "" : "s"} ago`;
 }
 
 function formatEventDate(dateStr: string): {
@@ -104,11 +115,9 @@ function formatSalary(job: any): string {
 	let min = job.salaryMin || job.salaryRangeMin;
 	let max = job.salaryMax || job.salaryRangeMax;
 
-	// Handle salary objects with min/max structure
 	if (typeof min === "object" && min?.min) min = min.min;
 	if (typeof max === "object" && max?.max) max = max.max;
 
-	// Ensure we're working with numbers
 	const minNum = typeof min === "number" ? min : null;
 	const maxNum = typeof max === "number" ? max : null;
 
@@ -122,7 +131,12 @@ function formatSalary(job: any): string {
 function getLocationName(item: any): string {
 	if (!item.location) return "";
 	if (typeof item.location === "object")
-		return item.location.name || item.location.title || "";
+		return (
+			item.location.name ||
+			item.location.title ||
+			item.location.city ||
+			""
+		);
 	return String(item.location);
 }
 
@@ -165,7 +179,6 @@ function safeRender(value: any): string {
 	)
 		return String(value);
 	if (typeof value === "object") {
-		// Try common property names that might contain display values
 		return (
 			value.name ||
 			value.title ||
@@ -198,47 +211,84 @@ async function HomePageContent({
 }) {
 	const searchParams = await searchParamsPromise;
 	const payload = await getPayload({ config });
+	const selectedCity = searchParams.location?.trim().toLowerCase();
+	const selectedCityName = selectedCity
+		? selectedCity
+				.split("-")
+				.map((part) =>
+					part ? part.charAt(0).toUpperCase() + part.slice(1) : part,
+				)
+				.join(" ")
+		: "";
 
-	// Build article filter based on selected location
 	const articleWhere: any = {
 		status: { equals: "published" },
 	};
+	const jobWhere: any = {
+		status: { equals: "active" },
+	};
+	const businessWhere: any = {
+		status: { not_equals: "inactive" },
+	};
 
-	if (searchParams.location) {
-		// Articles use 'city' field to filter by location
-		articleWhere.city = { equals: searchParams.location };
-		console.log("📍 News filter applied - City:", searchParams.location);
+	if (selectedCity) {
+		articleWhere.city = { equals: selectedCity };
+		jobWhere["location.city"] = { equals: selectedCity };
+		businessWhere.or = [
+			{ "address.city": { equals: selectedCity } },
+			...(selectedCityName
+				? [{ "address.city": { equals: selectedCityName } }]
+				: []),
+		];
+
+		console.log("📍 Home city filter applied:", selectedCity);
 	}
 
-	// Fetch all data with graceful error handling
 	let articles: any[] = [];
+	let filteredArticles: any[] = [];
 	let jobs: any[] = [];
 	let events: any[] = [];
 	let businesses: any[] = [];
 	let sponsors: any[] = [];
 	let locations: any[] = [];
 
+	// ═══ FETCH ALL ARTICLES (without city filter for hero) ═══
 	try {
 		const r = await payload.find({
 			collection: "articles",
 			limit: 12,
-			sort: "-publishedDate",
+			sort: "-publishedAt",
 			depth: 2,
-			where: articleWhere,
+			where: { status: { equals: "published" } },
 		});
-		console.log("Fetched articles:", r.docs.length);
 		articles = r.docs || [];
 	} catch (e) {
 		console.error("Home: failed to fetch articles", e);
+	}
+
+	// ═══ FETCH FILTERED ARTICLES (for sidebar only) ═══
+	if (selectedCity) {
+		try {
+			const r = await payload.find({
+				collection: "articles",
+				limit: 50,
+				sort: "-publishedAt",
+				depth: 2,
+				where: articleWhere,
+			});
+			filteredArticles = r.docs || [];
+		} catch (e) {
+			console.error("Home: failed to fetch filtered articles", e);
+		}
 	}
 	try {
 		const r = await payload.find({
 			collection: "jobs",
 			limit: 8,
-			sort: "-createdAt",
+			sort: "-postedAt",
 			depth: 1,
+			where: jobWhere,
 		});
-		console.log("Fetched jobs:", r.docs);
 		jobs = r.docs || [];
 	} catch (e) {
 		console.error("Home: failed to fetch jobs", e);
@@ -259,50 +309,29 @@ async function HomePageContent({
 			collection: "businesses",
 			limit: 8,
 			depth: 2,
+			where: businessWhere,
 		});
-		console.log("✅ Fetched businesses:", r.docs.length, "items");
-		console.log(
-			"📸 Business images:",
-			r.docs.map(
-				(b: any) =>
-					`${b.name}: ${b.photos?.[0]?.photo?.url ? "✓" : "✗"}`,
-			),
-		);
 		businesses = r.docs || [];
 	} catch (e) {
 		console.error("Home: failed to fetch businesses", e);
 	}
-	// Sponsors collection not yet created - using static fallback
-	// TODO: Create sponsors collection and uncomment fetch below
-	// try {
-	// 	const r = await payload.find({
-	// 		collection: "sponsors",
-	// 		limit: 2,
-	// 		depth: 1,
-	// 	});
-	// 	sponsors = r.docs || [];
-	// } catch (e) {
-	// 	console.error("Home: failed to fetch sponsors", e);
-	// }
 
-	// Fetch locations for secondary nav
 	try {
 		const r = await payload.find({
 			collection: "locations",
 			sort: "name",
 			limit: 20,
 		});
-		console.log("✅ Locations fetched:", r.docs.length);
 		locations = r.docs || [];
 	} catch (e) {
 		console.error("❌ Error fetching locations:", e);
 	}
 
-	// Slice data for different sections
 	const heroArticle = articles[0] || null;
-	const sidebarArticles = articles.slice(1, 6);
-	console.log("Sidebar articles:", sidebarArticles);
-	const sectionArticles = articles.slice(0, 4); // used for Food & Drink section
+	const sidebarArticles = selectedCity
+		? filteredArticles.slice(0, 5)
+		: articles.slice(1, 6);
+	const sectionArticles = articles.slice(0, 4);
 	const sidebarJobs = jobs.slice(0, 3);
 	const featuredJobs = jobs.slice(0, 4);
 	const featuredEvent = events[0] || null;
@@ -315,7 +344,7 @@ async function HomePageContent({
 				{/* ═══════════════════════════════════════
             LOCATION FILTER DROPDOWN
             ═══════════════════════════════════════ */}
-				{/* <LocationDropdown locations={locations} /> */}
+				<LocationDropdown locations={locations} />
 
 				{/* ═══════════════════════════════════════
             HERO 3-COLUMN GRID — ABOVE THE FOLD
@@ -363,110 +392,21 @@ async function HomePageContent({
 											{safeRender(article.title)}
 										</div>
 										<div className='ni-time'>
-											{article.publishedDate
-												? timeAgo(article.publishedDate)
-												: ""}
+											{article.publishedAt
+												? timeAgo(article.publishedAt)
+												: article.publishedDate
+													? timeAgo(
+															article.publishedDate,
+														)
+													: ""}
 										</div>
 									</Link>
 								);
 							})
 						) : (
-							/* Static fallback matching HTML design */
-							<>
-								<div className='news-item'>
-									<div
-										className='cat-tag'
-										style={{ color: "var(--orange)" }}
-									>
-										<span
-											className='cat-dot'
-											style={{
-												background: "var(--orange)",
-											}}
-										/>{" "}
-										Development
-									</div>
-									<div className='ni-title'>
-										H-E-B Confirms New Leander Location at
-										Crystal Falls Pkwy &amp; 183
-									</div>
-									<div className='ni-time'>2 hours ago</div>
-								</div>
-								<div className='news-item'>
-									<div
-										className='cat-tag'
-										style={{ color: "var(--blue)" }}
-									>
-										<span
-											className='cat-dot'
-											style={{
-												background: "var(--blue)",
-											}}
-										/>{" "}
-										Business
-									</div>
-									<div className='ni-title'>
-										Cedar Park Tech Startup Raises $12M,
-										Plans 50 New Hires
-									</div>
-									<div className='ni-time'>5 hours ago</div>
-								</div>
-								<div className='news-item'>
-									<div
-										className='cat-tag'
-										style={{ color: "var(--green)" }}
-									>
-										<span
-											className='cat-dot'
-											style={{
-												background: "var(--green)",
-											}}
-										/>{" "}
-										Schools
-									</div>
-									<div className='ni-title'>
-										LISD Board Approves $480M Bond for New
-										Elementary
-									</div>
-									<div className='ni-time'>Yesterday</div>
-								</div>
-								<div className='news-item'>
-									<div
-										className='cat-tag'
-										style={{ color: "var(--pink)" }}
-									>
-										<span
-											className='cat-dot'
-											style={{
-												background: "var(--pink)",
-											}}
-										/>{" "}
-										Food &amp; Drink
-									</div>
-									<div className='ni-title'>
-										Summermoon Coffee Opening Third WilCo
-										Location
-									</div>
-									<div className='ni-time'>Yesterday</div>
-								</div>
-								<div className='news-item'>
-									<div
-										className='cat-tag'
-										style={{ color: "var(--red)" }}
-									>
-										<span
-											className='cat-dot'
-											style={{ background: "var(--red)" }}
-										/>{" "}
-										Community
-									</div>
-									<div className='ni-title'>
-										Old Settlers Festival 2026 Lineup
-										Announced
-									</div>
-									<div className='ni-time'>2 days ago</div>
-								</div>
-							</>
+							<div className='news-item'>
+								<div className='ni-title'>No news found.</div>
+							</div>
 						)}
 
 						{/* Jobs Widget */}
@@ -506,39 +446,11 @@ async function HomePageContent({
 									</Link>
 								))
 							) : (
-								<>
-									<div className='job-item'>
-										<div className='ji-company'>
-											BSW Health
-										</div>
-										<div className='ji-title'>
-											Registered Nurse — ER
-										</div>
-										<div className='ji-meta'>
-											Round Rock · $72K–$95K
-										</div>
+								<div className='job-item'>
+									<div className='ji-title'>
+										No jobs found.
 									</div>
-									<div className='job-item'>
-										<div className='ji-company'>
-											Kalahari Resorts
-										</div>
-										<div className='ji-title'>
-											Restaurant Manager
-										</div>
-										<div className='ji-meta'>
-											Round Rock · $55K–$65K
-										</div>
-									</div>
-									<div className='job-item'>
-										<div className='ji-company'>LISD</div>
-										<div className='ji-title'>
-											Math Teacher — Vista Ridge HS
-										</div>
-										<div className='ji-meta'>
-											Leander · $52K–$68K
-										</div>
-									</div>
-								</>
+								</div>
 							)}
 						</div>
 					</div>
@@ -620,43 +532,26 @@ async function HomePageContent({
 									{safeRender(heroArticle.author) ||
 										"WilCo Guide Staff"}{" "}
 									·{" "}
-									{heroArticle.publishedDate
-										? timeAgo(heroArticle.publishedDate)
-										: ""}
+									{heroArticle.publishedAt
+										? timeAgo(heroArticle.publishedAt)
+										: heroArticle.publishedDate
+											? timeAgo(heroArticle.publishedDate)
+											: ""}
 								</div>
 							</Link>
 						) : (
-							/* Static fallback matching HTML design */
-							<div>
-								<div className='hero-img'>
-									<img
-										src='https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80'
-										alt='Kalahari Expansion'
-									/>
-								</div>
+							<div className='hero-img'>
 								<div
-									className='cat-tag hero-cat'
-									style={{ color: "var(--orange)" }}
+									style={{
+										height: "100%",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										color: "var(--text-muted)",
+										fontSize: 14,
+									}}
 								>
-									<span
-										className='cat-dot'
-										style={{ background: "var(--orange)" }}
-									/>{" "}
-									Development
-								</div>
-								<h2 className='hero-title'>
-									Kalahari Resorts Announces $250M Expansion,
-									Adding 400 New Jobs
-								</h2>
-								<p className='hero-excerpt'>
-									The Round Rock resort and waterpark is
-									planning a massive expansion including a new
-									350-room tower, convention center, and
-									multiple restaurants.
-								</p>
-								<div className='hero-meta'>
-									By WilCo Guide Staff · 1 hour ago · 4 min
-									read
+									No news found.
 								</div>
 							</div>
 						)}
@@ -981,72 +876,32 @@ async function HomePageContent({
 													{safeRender(article.title)}
 												</div>
 												<div className='ac-meta'>
-													{article.publishedDate
+													{article.publishedAt
 														? timeAgo(
-																article.publishedDate,
+																article.publishedAt,
 															)
-														: ""}
+														: article.publishedDate
+															? timeAgo(
+																	article.publishedDate,
+																)
+															: ""}
 												</div>
 											</div>
 										</Link>
 									);
 								})
-							: /* Static fallback */
-								[
-									{
-										img: "photo-1555396273-367ea4eb4db5",
-										title: "New Brewpub Opening in Downtown Leander This March",
-										time: "3 hours ago · 3 min read",
-									},
-									{
-										img: "photo-1414235077428-338989a2e8c0",
-										title: "Review: Rosalie's Italian — Best Pasta in Cedar Park?",
-										time: "Yesterday · 5 min read",
-									},
-									{
-										img: "photo-1504674900247-0877df9cc836",
-										title: "Summermoon Coffee Opening Third WilCo Location",
-										time: "Yesterday · 2 min read",
-									},
-									{
-										img: "photo-1565299624946-b28f40a0ae38",
-										title: "5 Best Taco Spots in Round Rock, Ranked by Locals",
-										time: "2 days ago · 4 min read",
-									},
-								].map((card, i) => (
+							: [
 									<div
 										className='article-card'
-										key={i}
+										key='no-articles'
 									>
-										<div className='ac-img'>
-											<img
-												src={`https://images.unsplash.com/${card.img}?w=400&q=80`}
-												alt=''
-											/>
-										</div>
 										<div className='ac-body'>
-											<div
-												className='cat-tag'
-												style={{ color: "var(--pink)" }}
-											>
-												<span
-													className='cat-dot'
-													style={{
-														background:
-															"var(--pink)",
-													}}
-												/>{" "}
-												Food &amp; Drink
-											</div>
 											<div className='ac-title'>
-												{card.title}
-											</div>
-											<div className='ac-meta'>
-												{card.time}
+												No news found.
 											</div>
 										</div>
-									</div>
-								))}
+									</div>,
+								]}
 					</div>
 				</div>
 
@@ -1108,77 +963,16 @@ async function HomePageContent({
 										</div>
 									</Link>
 								))
-							: /* Static fallback */
-								[
-									{
-										logo: "BSW",
-										company: "BSW Health",
-										title: "Registered Nurse — Emergency Dept",
-										salary: "$72K – $95K/yr",
-										tags: ["Full-time", "Round Rock"],
-									},
-									{
-										logo: "K",
-										company: "Kalahari Resorts",
-										title: "Restaurant Manager",
-										salary: "$55K – $65K/yr",
-										tags: ["Full-time", "Round Rock"],
-										color: "var(--orange)",
-									},
-									{
-										logo: "L",
-										company: "LISD",
-										title: "Math Teacher — Vista Ridge HS",
-										salary: "$52K – $68K/yr",
-										tags: ["Full-time", "Leander"],
-										color: "var(--green)",
-									},
-									{
-										logo: "EA",
-										company: "Emerson Automation",
-										title: "Senior Software Engineer",
-										salary: "$120K – $145K/yr",
-										tags: ["Full-time", "Round Rock"],
-										color: "var(--purple)",
-									},
-								].map((job, i) => (
+							: [
 									<div
 										className='job-card'
-										key={i}
+										key='no-jobs'
 									>
-										<div className='jc-company'>
-											<div
-												className='jc-logo'
-												style={
-													job.color
-														? { color: job.color }
-														: {}
-												}
-											>
-												{job.logo}
-											</div>
-											<div className='jc-name'>
-												{job.company}
-											</div>
-										</div>
 										<div className='jc-title'>
-											{safeRender(job.title)}
+											No jobs found.
 										</div>
-										<div className='jc-salary'>
-											{safeRender(job.salary)}
-										</div>
-										<div className='jc-tags'>
-											{job.tags.map((t, j) => (
-												<span
-													className='jc-tag'
-													key={j}
-												>
-													{t}
-												</span>
-											))}
-										</div>
-									</div>
-								))}
+									</div>,
+								]}
 					</div>
 				</div>
 
@@ -1480,75 +1274,16 @@ async function HomePageContent({
 											</Link>
 										);
 									})
-							: /* Static fallback */
-								[
-									{
-										logo: "CF",
-										name: "CrossFit Leander",
-										cat: "Fitness · Leander",
-										rating: "4.9 (187)",
-										partner: true,
-										bg: "#ecfdf5",
-										color: "var(--green)",
-									},
-									{
-										logo: "RI",
-										name: "Rosalie's Italian",
-										cat: "Restaurant · Cedar Park",
-										rating: "4.8 (423)",
-										partner: true,
-										bg: "#fce7f3",
-										color: "var(--pink)",
-									},
-									{
-										logo: "BSW",
-										name: "BSW Health",
-										cat: "Healthcare · Round Rock",
-										rating: "4.3 (1,204)",
-										partner: false,
-										bg: "#f0f4ff",
-										color: "var(--blue)",
-									},
-									{
-										logo: "JG",
-										name: "James Garza Law",
-										cat: "Attorney · Georgetown",
-										rating: "5.0 (89)",
-										partner: true,
-										bg: "#fef3c7",
-										color: "var(--yellow)",
-									},
-								].map((biz, i) => (
+							: [
 									<div
-										className={`dir-card${biz.partner ? " partner" : ""}`}
-										key={i}
+										className='dir-card'
+										key='no-businesses'
 									>
-										<div
-											className='dir-logo'
-											style={{
-												background: biz.bg,
-												color: biz.color,
-											}}
-										>
-											{biz.logo}
-										</div>
 										<div className='dir-name'>
-											{safeRender(biz.name)}
+											No business found.
 										</div>
-										<div className='dir-category'>
-											{biz.cat}
-										</div>
-										<div className='dir-rating'>
-											<span className='stars'>★★★★★</span>{" "}
-											{biz.rating}
-										</div>
-										{biz.partner && (
-											<div className='partner-badge'>
-												Partner
-											</div>
-										)}
-									</div>
-								))}
+									</div>,
+								]}
 					</div>
 				</div>
 			</div>

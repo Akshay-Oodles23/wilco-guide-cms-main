@@ -754,125 +754,140 @@ export default async function JobsPage({
 			<div className='jobs-section-header'>
 				<h2 className='jobs-section-title'>Top Opportunities</h2>
 			</div>
-			<div className='jobs-premium-jobs'>
-				{displayPremiumJobs.map((job) => (
-					<div
-						key={job.id}
-						className='jobs-premium-card jobs-glow-border'
-						style={{ position: "relative" }}
-						data-job-id={job.id}
-					>
-						<Link
-							href={`/jobs/${job.id}`}
-							aria-label={`View job: ${job.title}`}
-							style={{
-								position: "absolute",
-								inset: 0,
-								zIndex: 2,
-								textDecoration: "none",
-							}}
-						/>
-						<div className='jobs-premium-inner'>
-							<div className='jobs-premium-logo'>
-								<img
-									src={getCompanyLogo(job.company)}
-									alt={getCompanyName(job.company)}
-								/>
-							</div>
-							<div className='jobs-premium-info'>
-								<div className='jobs-premium-company'>
-									{getCompanyName(job.company)}
+			{displayPremiumJobs.length > 0 ? (
+				<div className='jobs-premium-jobs'>
+					{displayPremiumJobs.map((job) => (
+						<div
+							key={job.id}
+							className='jobs-premium-card jobs-glow-border'
+							style={{ position: "relative" }}
+							data-job-id={job.id}
+						>
+							<Link
+								href={`/jobs/${job.id}`}
+								aria-label={`View job: ${job.title}`}
+								style={{
+									position: "absolute",
+									inset: 0,
+									zIndex: 2,
+									textDecoration: "none",
+								}}
+							/>
+							<div className='jobs-premium-inner'>
+								<div className='jobs-premium-logo'>
+									<img
+										src={getCompanyLogo(job.company)}
+										alt={getCompanyName(job.company)}
+									/>
 								</div>
-								<div className='jobs-premium-title'>
-									{job.title}
-								</div>
-								<div className='jobs-premium-tags'>
-									{job.tags && job.tags.length > 0 ? (
-										job.tags.map((tag, idx) => (
-											<span
-												key={idx}
-												className={`jobs-ptag ${
-													tag.includes("Full-time")
-														? "jobs-ptag-ft"
-														: tag.includes(
-																	"Benefit",
-															  )
-															? "jobs-ptag-bn"
-															: "jobs-ptag-ur"
-												}`}
-											>
-												{tag}
+								<div className='jobs-premium-info'>
+									<div className='jobs-premium-company'>
+										{getCompanyName(job.company)}
+									</div>
+									<div className='jobs-premium-title'>
+										{job.title}
+									</div>
+									<div className='jobs-premium-tags'>
+										{job.tags && job.tags.length > 0 ? (
+											job.tags.map((tag, idx) => (
+												<span
+													key={idx}
+													className={`jobs-ptag ${
+														tag.includes(
+															"Full-time",
+														)
+															? "jobs-ptag-ft"
+															: tag.includes(
+																		"Benefit",
+																  )
+																? "jobs-ptag-bn"
+																: "jobs-ptag-ur"
+													}`}
+												>
+													{tag}
+												</span>
+											))
+										) : (
+											<span className='jobs-ptag jobs-ptag-ft'>
+												Full-time
 											</span>
-										))
-									) : (
-										<span className='jobs-ptag jobs-ptag-ft'>
-											Full-time
-										</span>
-									)}
-								</div>
-								<div className='jobs-premium-meta'>
-									{job.location && (
-										<span className='jobs-premium-meta-item'>
-											📍 {job.location}
-										</span>
-									)}
-									<span className='jobs-premium-meta-item'>
-										📅 {formatDate(job.createdAt)}
-									</span>
-								</div>
-							</div>
-							<div className='jobs-premium-right'>
-								<div>
-									<div className='jobs-premium-salary'>
-										{formatSalary(
-											job.salaryMin,
-											job.salaryMax,
-											job.isHourly,
 										)}
 									</div>
-									<div className='jobs-premium-salary-sub'>
-										{job.isHourly
-											? "per hour"
-											: "per year" +
-												(job.salaryMax
-													? " + signing bonus"
-													: "")}
+									<div className='jobs-premium-meta'>
+										{job.location && (
+											<span className='jobs-premium-meta-item'>
+												📍 {job.location}
+											</span>
+										)}
+										<span className='jobs-premium-meta-item'>
+											📅 {formatDate(job.createdAt)}
+										</span>
 									</div>
 								</div>
-								{job.applicationUrl ? (
-									<a
-										href={job.applicationUrl}
-										target='_blank'
-										rel='noopener noreferrer'
-										className='jobs-premium-apply'
-										style={{
-											textDecoration: "none",
-											display: "inline-block",
-											position: "relative",
-											zIndex: 3,
-										}}
-									>
-										Apply Now
-									</a>
-								) : (
-									<button
-										className='jobs-premium-apply'
-										disabled
-										style={{
-											opacity: 0.6,
-											cursor: "not-allowed",
-											position: "relative",
-											zIndex: 3,
-										}}
-									>
-										Apply Now
-									</button>
-								)}
+								<div className='jobs-premium-right'>
+									<div>
+										<div className='jobs-premium-salary'>
+											{formatSalary(
+												job.salaryMin,
+												job.salaryMax,
+												job.isHourly,
+											)}
+										</div>
+										<div className='jobs-premium-salary-sub'>
+											{job.isHourly
+												? "per hour"
+												: "per year" +
+													(job.salaryMax
+														? " + signing bonus"
+														: "")}
+										</div>
+									</div>
+									{job.applicationUrl ? (
+										<a
+											href={job.applicationUrl}
+											target='_blank'
+											rel='noopener noreferrer'
+											className='jobs-premium-apply'
+											style={{
+												textDecoration: "none",
+												display: "inline-block",
+												position: "relative",
+												zIndex: 3,
+											}}
+										>
+											Apply Now
+										</a>
+									) : (
+										<button
+											className='jobs-premium-apply'
+											disabled
+											style={{
+												opacity: 0.6,
+												cursor: "not-allowed",
+												position: "relative",
+												zIndex: 3,
+											}}
+										>
+											Apply Now
+										</button>
+									)}
+								</div>
 							</div>
 						</div>
-					</div>
-				))}
-			</div>
+					))}
+				</div>
+			) : (
+				<div
+					style={{
+						padding: "40px 20px",
+						textAlign: "center",
+						color: "#666",
+						fontSize: "16px",
+					}}
+				>
+					No jobs found.
+				</div>
+			)}
 
 			{/* FEATURED JOBS */}
 			<div className='jobs-section-header'>
@@ -881,114 +896,129 @@ export default async function JobsPage({
 					{displayFeaturedJobs.length} featured
 				</span>
 			</div>
-			<div className='jobs-featured-grid'>
-				{displayFeaturedJobs.map((job) => (
-					<div
-						key={job.id}
-						className='jobs-featured-card jobs-glow-border'
-						style={{ position: "relative" }}
-						data-job-id={job.id}
-					>
-						<Link
-							href={`/jobs/${job.id}`}
-							aria-label={`View job: ${job.title}`}
-							style={{
-								position: "absolute",
-								inset: 0,
-								zIndex: 2,
-								textDecoration: "none",
-							}}
-						/>
-						<div className='jobs-featured-inner'>
-							<div className='jobs-featured-top'>
-								<div className='jobs-featured-logo'>
-									<img
-										src={getCompanyLogo(job.company)}
-										alt={getCompanyName(job.company)}
-									/>
-								</div>
-								<div>
-									<div className='jobs-featured-company'>
-										{getCompanyName(job.company)}
+			{displayFeaturedJobs.length > 0 ? (
+				<div className='jobs-featured-grid'>
+					{displayFeaturedJobs.map((job) => (
+						<div
+							key={job.id}
+							className='jobs-featured-card jobs-glow-border'
+							style={{ position: "relative" }}
+							data-job-id={job.id}
+						>
+							<Link
+								href={`/jobs/${job.id}`}
+								aria-label={`View job: ${job.title}`}
+								style={{
+									position: "absolute",
+									inset: 0,
+									zIndex: 2,
+									textDecoration: "none",
+								}}
+							/>
+							<div className='jobs-featured-inner'>
+								<div className='jobs-featured-top'>
+									<div className='jobs-featured-logo'>
+										<img
+											src={getCompanyLogo(job.company)}
+											alt={getCompanyName(job.company)}
+										/>
 									</div>
-									<div className='jobs-featured-posted-sm'>
-										{formatDate(job.createdAt)}
+									<div>
+										<div className='jobs-featured-company'>
+											{getCompanyName(job.company)}
+										</div>
+										<div className='jobs-featured-posted-sm'>
+											{formatDate(job.createdAt)}
+										</div>
 									</div>
 								</div>
-							</div>
-							<div className='jobs-featured-jobtitle'>
-								{job.title}
-							</div>
-							<div className='jobs-featured-tags'>
-								{job.tags && job.tags.length > 0 ? (
-									job.tags.slice(0, 2).map((tag, idx) => (
-										<span
-											key={idx}
-											className={`jobs-ftag ${
-												tag.includes("Full-time")
-													? "jobs-ftag-ft"
-													: tag.includes("Benefit")
-														? "jobs-ftag-bn"
-														: "jobs-ftag-pt"
-											}`}
-										>
-											{tag}
+								<div className='jobs-featured-jobtitle'>
+									{job.title}
+								</div>
+								<div className='jobs-featured-tags'>
+									{job.tags && job.tags.length > 0 ? (
+										job.tags.slice(0, 2).map((tag, idx) => (
+											<span
+												key={idx}
+												className={`jobs-ftag ${
+													tag.includes("Full-time")
+														? "jobs-ftag-ft"
+														: tag.includes(
+																	"Benefit",
+															  )
+															? "jobs-ftag-bn"
+															: "jobs-ftag-pt"
+												}`}
+											>
+												{tag}
+											</span>
+										))
+									) : (
+										<span className='jobs-ftag jobs-ftag-ft'>
+											Full-time
 										</span>
-									))
-								) : (
-									<span className='jobs-ftag jobs-ftag-ft'>
-										Full-time
-									</span>
-								)}
-							</div>
-							<div className='jobs-featured-meta'>
-								{job.location && (
-									<span className='jobs-featured-meta-item'>
-										📍 {job.location}
-									</span>
-								)}
-							</div>
-							<div className='jobs-featured-bottom'>
-								<span className='jobs-featured-salary'>
-									{formatSalary(
-										job.salaryMin,
-										job.salaryMax,
-										job.isHourly,
 									)}
-								</span>
-								{job.applicationUrl ? (
-									<a
-										href={job.applicationUrl}
-										target='_blank'
-										rel='noopener noreferrer'
-										className='jobs-featured-apply-btn'
-										style={{
-											textDecoration: "none",
-											position: "relative",
-											zIndex: 3,
-										}}
-									>
-										Apply
-									</a>
-								) : (
-									<button
-										className='jobs-featured-apply-btn'
-										disabled
-										style={{
-											opacity: 0.6,
-											cursor: "not-allowed",
-											position: "relative",
-											zIndex: 3,
-										}}
-									>
-										Apply
-									</button>
-								)}
+								</div>
+								<div className='jobs-featured-meta'>
+									{job.location && (
+										<span className='jobs-featured-meta-item'>
+											📍 {job.location}
+										</span>
+									)}
+								</div>
+								<div className='jobs-featured-bottom'>
+									<span className='jobs-featured-salary'>
+										{formatSalary(
+											job.salaryMin,
+											job.salaryMax,
+											job.isHourly,
+										)}
+									</span>
+									{job.applicationUrl ? (
+										<a
+											href={job.applicationUrl}
+											target='_blank'
+											rel='noopener noreferrer'
+											className='jobs-featured-apply-btn'
+											style={{
+												textDecoration: "none",
+												position: "relative",
+												zIndex: 3,
+											}}
+										>
+											Apply
+										</a>
+									) : (
+										<button
+											className='jobs-featured-apply-btn'
+											disabled
+											style={{
+												opacity: 0.6,
+												cursor: "not-allowed",
+												position: "relative",
+												zIndex: 3,
+											}}
+										>
+											Apply
+										</button>
+									)}
+								</div>
 							</div>
 						</div>
-					</div>
-				))}
-			</div>
+					))}
+				</div>
+			) : (
+				<div
+					style={{
+						padding: "40px 20px",
+						textAlign: "center",
+						color: "#666",
+						fontSize: "16px",
+					}}
+				>
+					No jobs found.
+				</div>
+			)}
 
 			{/* TWO-COLUMN: STANDARD LISTINGS + SIDEBAR */}
 			<div className='jobs-section-header'>
@@ -997,204 +1027,224 @@ export default async function JobsPage({
 					{displayStandardJobs.length} jobs
 				</span>
 			</div>
-			<div className='jobs-listings-layout'>
-				<div>
-					<div className='jobs-standard-list'>
-						{displayStandardJobs.map((job) => (
-							<div
-								key={job.id}
-								className='jobs-standard-row'
-								style={{ position: "relative" }}
-								data-job-id={job.id}
-							>
-								<Link
-									href={`/jobs/${job.id}`}
-									aria-label={`View job: ${job.title}`}
-									style={{
-										position: "absolute",
-										inset: 0,
-										zIndex: 2,
-										textDecoration: "none",
-									}}
-								/>
-								<div className='jobs-standard-logo'>
-									{getCompanyInitials(job.company)}
-								</div>
-								<div className='jobs-standard-info'>
-									<div className='jobs-standard-title'>
-										{job.title}
-									</div>
-									<div className='jobs-standard-company-row'>
-										<span>
-											{getCompanyName(job.company)}
-										</span>
-										{job.location && (
-											<span>📍 {job.location}</span>
-										)}
-									</div>
-								</div>
-								<span
-									className={`jobs-standard-type ${job.jobType === "Part-time" ? "jobs-ftag-pt" : "jobs-ftag-ft"}`}
+			{displayStandardJobs.length > 0 ? (
+				<div className='jobs-listings-layout'>
+					<div>
+						<div className='jobs-standard-list'>
+							{displayStandardJobs.map((job) => (
+								<div
+									key={job.id}
+									className='jobs-standard-row'
+									style={{ position: "relative" }}
+									data-job-id={job.id}
 								>
-									{job.jobType || "Full-time"}
-								</span>
-								<span className='jobs-standard-salary'>
-									{formatSalary(
-										job.salaryMin,
-										job.salaryMax,
-										job.isHourly,
-									)}
-								</span>
-								<span className='jobs-standard-date'>
-									{formatDate(job.createdAt)}
-								</span>
-								{job.applicationUrl ? (
-									<a
-										href={job.applicationUrl}
-										target='_blank'
-										rel='noopener noreferrer'
-										className='jobs-standard-apply'
+									<Link
+										href={`/jobs/${job.id}`}
+										aria-label={`View job: ${job.title}`}
 										style={{
+											position: "absolute",
+											inset: 0,
+											zIndex: 2,
 											textDecoration: "none",
-											position: "relative",
-											zIndex: 3,
 										}}
+									/>
+									<div className='jobs-standard-logo'>
+										{getCompanyInitials(job.company)}
+									</div>
+									<div className='jobs-standard-info'>
+										<div className='jobs-standard-title'>
+											{job.title}
+										</div>
+										<div className='jobs-standard-company-row'>
+											<span>
+												{getCompanyName(job.company)}
+											</span>
+											{job.location && (
+												<span>📍 {job.location}</span>
+											)}
+										</div>
+									</div>
+									<span
+										className={`jobs-standard-type ${job.jobType === "Part-time" ? "jobs-ftag-pt" : "jobs-ftag-ft"}`}
 									>
-										Apply
-									</a>
-								) : (
-									<button
-										className='jobs-standard-apply'
-										disabled
-										style={{
-											opacity: 0.6,
-											cursor: "not-allowed",
-											position: "relative",
-											zIndex: 3,
-										}}
-									>
-										Apply
-									</button>
-								)}
-							</div>
-						))}
-					</div>
-					{displayStandardJobs.length > 0 ? (
-						<div
-							style={{
-								padding: "20px",
-								textAlign: "center",
-							}}
-						>
-							<p
+										{job.jobType || "Full-time"}
+									</span>
+									<span className='jobs-standard-salary'>
+										{formatSalary(
+											job.salaryMin,
+											job.salaryMax,
+											job.isHourly,
+										)}
+									</span>
+									<span className='jobs-standard-date'>
+										{formatDate(job.createdAt)}
+									</span>
+									{job.applicationUrl ? (
+										<a
+											href={job.applicationUrl}
+											target='_blank'
+											rel='noopener noreferrer'
+											className='jobs-standard-apply'
+											style={{
+												textDecoration: "none",
+												position: "relative",
+												zIndex: 3,
+											}}
+										>
+											Apply
+										</a>
+									) : (
+										<button
+											className='jobs-standard-apply'
+											disabled
+											style={{
+												opacity: 0.6,
+												cursor: "not-allowed",
+												position: "relative",
+												zIndex: 3,
+											}}
+										>
+											Apply
+										</button>
+									)}
+								</div>
+							))}
+						</div>
+						{displayStandardJobs.length > 0 ? (
+							<div
 								style={{
-									color: "#666",
-									fontSize: "14px",
-									marginBottom: "10px",
+									padding: "20px",
+									textAlign: "center",
 								}}
 							>
-								Showing all {displayStandardJobs.length} jobs
-							</p>
+								<p
+									style={{
+										color: "#666",
+										fontSize: "14px",
+										marginBottom: "10px",
+									}}
+								>
+									Showing all {displayStandardJobs.length}{" "}
+									jobs
+								</p>
+							</div>
+						) : (
+							<div className='jobs-load-more'>
+								<button
+									className='jobs-load-more-btn'
+									style={{
+										opacity: 0.5,
+										cursor: "not-allowed",
+									}}
+								>
+									No More Jobs
+								</button>
+							</div>
+						)}
+					</div>
+
+					{/* SIDEBAR */}
+					<div className='jobs-sidebar'>
+						{/* Featured Companies */}
+						<div className='jobs-sidebar-widget-dark'>
+							<div className='jobs-sidebar-widget-title'>
+								Featured Companies{" "}
+								<span className='jobs-sidebar-sponsored'>
+									Sponsored
+								</span>
+							</div>
+							{featuredCompanies.map((business) => (
+								<div
+									key={business.id}
+									className='jobs-sidebar-company'
+								>
+									<div className='jobs-sidebar-co-logo'>
+										{getInitials(business.name)}
+									</div>
+									<div>
+										<div className='jobs-sidebar-co-name'>
+											{business.name}
+										</div>
+										<div className='jobs-sidebar-co-count'>
+											{business.jobCount || 0} open jobs
+										</div>
+									</div>
+								</div>
+							))}
 						</div>
-					) : (
-						<div className='jobs-load-more'>
-							<button
-								className='jobs-load-more-btn'
-								style={{ opacity: 0.5, cursor: "not-allowed" }}
-							>
-								No More Jobs
+
+						{/* Spotlight Job */}
+						<div className='jobs-sidebar-widget'>
+							<div className='jobs-sidebar-widget-title'>
+								Spotlight{" "}
+								<span className='jobs-sidebar-sponsored'>
+									Sponsored
+								</span>
+							</div>
+							<div className='jobs-sidebar-featured-job'>
+								<div className='jobs-sfj-company'>
+									{spotlightBusiness?.name ||
+										"Featured Company"}
+								</div>
+								<div className='jobs-sfj-title'>
+									Medical Assistant — Primary Care
+								</div>
+								<div className='jobs-sfj-meta'>
+									📍 Round Rock · Full-time
+								</div>
+								<div className='jobs-sfj-salary'>
+									$36,000 – $44,000/yr
+								</div>
+								<button className='jobs-sfj-apply'>
+									Apply Now
+								</button>
+							</div>
+						</div>
+
+						{/* Newsletter */}
+						<div className='jobs-sidebar-widget jobs-sidebar-newsletter'>
+							<div className='jobs-sidebar-newsletter-icon'>
+								📬
+							</div>
+							<div className='jobs-sidebar-newsletter-title'>
+								Get jobs in your inbox
+							</div>
+							<div className='jobs-sidebar-newsletter-sub'>
+								New local jobs delivered every week with the
+								WilCo Guide newsletter
+							</div>
+							<button className='jobs-sidebar-newsletter-btn'>
+								Subscribe Free
 							</button>
 						</div>
-					)}
-				</div>
 
-				{/* SIDEBAR */}
-				<div className='jobs-sidebar'>
-					{/* Featured Companies */}
-					<div className='jobs-sidebar-widget-dark'>
-						<div className='jobs-sidebar-widget-title'>
-							Featured Companies{" "}
-							<span className='jobs-sidebar-sponsored'>
-								Sponsored
-							</span>
-						</div>
-						{featuredCompanies.map((business) => (
-							<div
-								key={business.id}
-								className='jobs-sidebar-company'
-							>
-								<div className='jobs-sidebar-co-logo'>
-									{getInitials(business.name)}
-								</div>
-								<div>
-									<div className='jobs-sidebar-co-name'>
-										{business.name}
-									</div>
-									<div className='jobs-sidebar-co-count'>
-										{business.jobCount || 0} open jobs
-									</div>
-								</div>
+						{/* Post Job */}
+						<div className='jobs-sidebar-post-cta'>
+							<div className='jobs-sidebar-post-title'>
+								Hiring locally?
 							</div>
-						))}
-					</div>
-
-					{/* Spotlight Job */}
-					<div className='jobs-sidebar-widget'>
-						<div className='jobs-sidebar-widget-title'>
-							Spotlight{" "}
-							<span className='jobs-sidebar-sponsored'>
-								Sponsored
-							</span>
-						</div>
-						<div className='jobs-sidebar-featured-job'>
-							<div className='jobs-sfj-company'>
-								{spotlightBusiness?.name || "Featured Company"}
+							<div className='jobs-sidebar-post-sub'>
+								Post your job for free and reach 15,000+ WilCo
+								residents
 							</div>
-							<div className='jobs-sfj-title'>
-								Medical Assistant — Primary Care
-							</div>
-							<div className='jobs-sfj-meta'>
-								📍 Round Rock · Full-time
-							</div>
-							<div className='jobs-sfj-salary'>
-								$36,000 – $44,000/yr
-							</div>
-							<button className='jobs-sfj-apply'>
-								Apply Now
+							<button className='jobs-sidebar-post-btn'>
+								Post a Job Free
 							</button>
 						</div>
 					</div>
-
-					{/* Newsletter */}
-					<div className='jobs-sidebar-widget jobs-sidebar-newsletter'>
-						<div className='jobs-sidebar-newsletter-icon'>📬</div>
-						<div className='jobs-sidebar-newsletter-title'>
-							Get jobs in your inbox
-						</div>
-						<div className='jobs-sidebar-newsletter-sub'>
-							New local jobs delivered every week with the WilCo
-							Guide newsletter
-						</div>
-						<button className='jobs-sidebar-newsletter-btn'>
-							Subscribe Free
-						</button>
-					</div>
-
-					{/* Post Job */}
-					<div className='jobs-sidebar-post-cta'>
-						<div className='jobs-sidebar-post-title'>
-							Hiring locally?
-						</div>
-						<div className='jobs-sidebar-post-sub'>
-							Post your job for free and reach 15,000+ WilCo
-							residents
-						</div>
-						<button className='jobs-sidebar-post-btn'>
-							Post a Job Free
-						</button>
-					</div>
 				</div>
-			</div>
+			) : (
+				<div
+					style={{
+						padding: "40px 20px",
+						textAlign: "center",
+						color: "#666",
+						fontSize: "16px",
+					}}
+				>
+					No jobs found.
+				</div>
+			)}
 
 			{/* COMPANIES TO WATCH (bottom) */}
 			<div className='jobs-companies-section'>
