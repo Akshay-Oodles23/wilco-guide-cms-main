@@ -54,30 +54,35 @@ function getBusinessLocation(business: any): string {
 function getImageUrl(media: any): string | null {
 	if (!media) return null;
 	
-	// If it's a string URL
+	// If it's a string, check if it's already absolute
 	if (typeof media === "string") {
-		// If it's already absolute, return as-is
 		if (media.startsWith("http://") || media.startsWith("https://")) {
 			return media;
 		}
-		// If it's relative, prepend site URL
-		const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://wilcoguide.com";
-		return media.startsWith("/") ? `${baseUrl}${media}` : `${baseUrl}/${media}`;
+		// If it's a relative path, prepend the CMS URL
+		if (media.startsWith("/")) {
+			const cmsUrl = process.env.NEXT_PUBLIC_PAYLOAD_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://wilco-cms.netlify.app";
+			return `${cmsUrl.replace(/\/$/, "")}${media}`;
+		}
+		return media;
 	}
 	
-	// If it's an object with a url property
+	// Handle object with url property
 	if (media.url) {
 		if (media.url.startsWith("http://") || media.url.startsWith("https://")) {
 			return media.url;
 		}
-		const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://wilcoguide.com";
-		return media.url.startsWith("/") ? `${baseUrl}${media.url}` : `${baseUrl}/${media.url}`;
+		if (media.url.startsWith("/")) {
+			const cmsUrl = process.env.NEXT_PUBLIC_PAYLOAD_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://wilco-cms.netlify.app";
+			return `${cmsUrl.replace(/\/$/, "")}${media.url}`;
+		}
+		return media.url;
 	}
 	
-	// If it has a filename property
+	// Handle object with filename property
 	if (media.filename) {
-		const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://wilcoguide.com";
-		return `${baseUrl}/api/media/file/${media.filename}`;
+		const cmsUrl = process.env.NEXT_PUBLIC_PAYLOAD_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://wilco-cms.netlify.app";
+		return `${cmsUrl.replace(/\/$/, "")}/api/media/file/${media.filename}`;
 	}
 	
 	return null;
