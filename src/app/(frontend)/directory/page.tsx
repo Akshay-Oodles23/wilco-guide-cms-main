@@ -53,38 +53,9 @@ function getBusinessLocation(business: any): string {
 
 function getImageUrl(media: any): string | null {
 	if (!media) return null;
-	
-	// If it's a string, check if it's already absolute
-	if (typeof media === "string") {
-		if (media.startsWith("http://") || media.startsWith("https://")) {
-			return media;
-		}
-		// If it's a relative path, prepend the CMS URL
-		if (media.startsWith("/")) {
-			const cmsUrl = process.env.NEXT_PUBLIC_PAYLOAD_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://wilco-cms.netlify.app";
-			return `${cmsUrl.replace(/\/$/, "")}${media}`;
-		}
-		return media;
-	}
-	
-	// Handle object with url property
-	if (media.url) {
-		if (media.url.startsWith("http://") || media.url.startsWith("https://")) {
-			return media.url;
-		}
-		if (media.url.startsWith("/")) {
-			const cmsUrl = process.env.NEXT_PUBLIC_PAYLOAD_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://wilco-cms.netlify.app";
-			return `${cmsUrl.replace(/\/$/, "")}${media.url}`;
-		}
-		return media.url;
-	}
-	
-	// Handle object with filename property
-	if (media.filename) {
-		const cmsUrl = process.env.NEXT_PUBLIC_PAYLOAD_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://wilco-cms.netlify.app";
-		return `${cmsUrl.replace(/\/$/, "")}/api/media/file/${media.filename}`;
-	}
-	
+	if (typeof media === "string") return media;
+	if (media.url) return media.url;
+	if (media.filename) return `/media/${media.filename}`;
 	return null;
 }
 
