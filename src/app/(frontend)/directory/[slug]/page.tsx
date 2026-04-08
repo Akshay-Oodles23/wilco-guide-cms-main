@@ -526,7 +526,14 @@ export default async function BusinessDetailPage({ params }: Props) {
 						)}
 
 						{/* ARTICLES (SEO content - paid only) */}
-						<div className='widget'>
+						<div
+							className='widget'
+							style={{
+								opacity: 0.5,
+								pointerEvents: "none",
+								filter: "grayscale(100%)",
+							}}
+						>
 							<div className='widget-header'>
 								<h2 className='widget-title'>Articles</h2>
 								<div className='widget-nav'>

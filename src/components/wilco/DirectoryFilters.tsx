@@ -22,6 +22,7 @@ const DirectoryFilters: React.FC<DirectoryFiltersProps> = ({
 		null,
 	);
 	const locationMenuRef = useRef<HTMLDivElement>(null);
+	const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
 	// Initialize from URL params on mount
 	useEffect(() => {
@@ -48,6 +49,15 @@ const DirectoryFilters: React.FC<DirectoryFiltersProps> = ({
 		document.addEventListener("mousedown", handleClickOutside);
 		return () =>
 			document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
+
+	// Cleanup debounce timer on unmount
+	useEffect(() => {
+		return () => {
+			if (debounceTimerRef.current) {
+				clearTimeout(debounceTimerRef.current);
+			}
+		};
 	}, []);
 
 	const updateFilters = (
@@ -80,19 +90,43 @@ const DirectoryFilters: React.FC<DirectoryFiltersProps> = ({
 	const handleCategorySelect = (category: string) => {
 		const newCategory = activeCategory === category ? null : category;
 		setActiveCategory(newCategory);
-		updateFilters(newCategory);
+		// Immediately update URL for category (no debounce needed for clicks)
+		if (debounceTimerRef.current) {
+			clearTimeout(debounceTimerRef.current);
+		}
+		debounceTimerRef.current = setTimeout(() => {
+			updateFilters(newCategory);
+		}, 300);
 	};
 
 	const handleLocationSelect = (location: string) => {
 		setSelectedLocation(location === selectedLocation ? "" : location);
 		setIsLocationOpen(false);
-		updateFilters(undefined, location === selectedLocation ? "" : location);
+		// Immediately update URL for location (no debounce needed for clicks)
+		if (debounceTimerRef.current) {
+			clearTimeout(debounceTimerRef.current);
+		}
+		debounceTimerRef.current = setTimeout(() => {
+			updateFilters(
+				undefined,
+				location === selectedLocation ? "" : location,
+			);
+		}, 300);
 	};
 
 	const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value;
-		setSearchQuery(value);
-		updateFilters(undefined, undefined, value);
+		setSearchQuery(value); // Update UI immediately
+
+		// Clear previous timer
+		if (debounceTimerRef.current) {
+			clearTimeout(debounceTimerRef.current);
+		}
+
+		// Set new timer - wait 500ms before updating URL
+		debounceTimerRef.current = setTimeout(() => {
+			updateFilters(undefined, undefined, value);
+		}, 500);
 	};
 
 	return (
