@@ -8,7 +8,6 @@ import config from "@/payload.config";
 import DirectoryFilters from "@/components/wilco/DirectoryFilters";
 import "@/styles/directory.css";
 
-
 function getLocationName(item: any): string {
 	if (!item.location) return "WilCo";
 	if (typeof item.location === "object")
@@ -303,7 +302,6 @@ export default async function DirectoryAllPage(props: {
 					</Link>
 				</div>
 			)}
-
 		</div>
 	);
 }
