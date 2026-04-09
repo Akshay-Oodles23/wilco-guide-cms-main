@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "generate:types": "payload generate:types",
-    "generate:importmap": "payload generate:importmap"
+    "generate:importmap": "payload generate:importmap",
+    "upload:cities": "node scripts/bulk-upload/upload-cities.mjs"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "^3.76.0",

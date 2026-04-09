@@ -160,25 +160,11 @@ export const Jobs: CollectionConfig = {
 			fields: [
 				{
 					name: "city",
-					type: "select",
+					type: "relationship",
+					relationTo: "locations",
 					label: "City",
-					options: [
-						{ label: "Georgetown", value: "georgetown" },
-						{ label: "Round Rock", value: "round-rock" },
-						{ label: "Cedar Park", value: "cedar-park" },
-						{ label: "Leander", value: "leander" },
-						{ label: "Liberty Hill", value: "liberty-hill" },
-						{ label: "Hutto", value: "hutto" },
-						{ label: "Taylor", value: "taylor" },
-						{ label: "Jarrell", value: "jarrell" },
-						{ label: "Florence", value: "florence" },
-					],
-				},
-				{
-					name: "state",
-					type: "text",
-					label: "State",
-					defaultValue: "TX",
+					required: true,
+					index: true,
 				},
 				{
 					name: "remote",

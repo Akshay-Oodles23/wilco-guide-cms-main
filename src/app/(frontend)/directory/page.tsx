@@ -30,11 +30,8 @@ function getBusinessLocation(business: any): string {
 	// Check address.city first (most reliable for CMS businesses)
 	if (business.address?.city) {
 		if (typeof business.address.city === "object") {
-			return (
-				business.address.city?.name ||
-				business.address.city?.title ||
-				""
-			);
+			// It's now a relationship object with 'name' and 'slug'
+			return business.address.city?.name || "";
 		}
 		return String(business.address.city);
 	}

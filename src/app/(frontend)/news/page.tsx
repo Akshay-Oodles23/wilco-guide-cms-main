@@ -55,6 +55,49 @@ async function NewsPageContent({
 		status: { equals: "published" },
 	};
 
+	let selectedLocationId: string | null = null;
+
+	// Fetch locations first (we'll need it for all cases)
+	let locationsResult = { docs: [] };
+	try {
+		locationsResult = await payload.find({
+			collection: "locations",
+			sort: "name",
+			limit: 50,
+			overrideAccess: true,
+		});
+		console.log(
+			"✅ Locations fetched:",
+			locationsResult.docs.length,
+			locationsResult.docs.map((l: any) => ({
+				name: l.name,
+				slug: l.slug,
+			})),
+		);
+	} catch (e) {
+		console.error("❌ Error fetching locations:", e);
+	}
+
+	// Handle location filter - convert slug to ID
+	if (searchParams.location) {
+		const locationDoc = locationsResult.docs.find(
+			(loc: any) => loc.slug === searchParams.location,
+		);
+		if (locationDoc) {
+			selectedLocationId = locationDoc.id;
+			articleWhere.city = {
+				equals: selectedLocationId,
+			};
+			console.log(
+				`✅ Location filter applied: "${searchParams.location}" (ID: ${selectedLocationId})`,
+			);
+		} else {
+			console.warn(
+				`⚠️ Location slug "${searchParams.location}" not found`,
+			);
+		}
+	}
+
 	if (searchParams.category) {
 		// Find category by slug
 		try {
@@ -77,13 +120,6 @@ async function NewsPageContent({
 		articleWhere.newsletterBrand = { equals: searchParams.brand };
 	}
 
-	if (searchParams.location) {
-		// Articles use 'city' field, not a relationship to locations
-		// The location slug matches the city field value
-		articleWhere.city = { equals: searchParams.location };
-		console.log("📍 Location filter applied:", searchParams.location);
-	}
-
 	// Fetch data in parallel
 	const [
 		heroResult,
@@ -92,7 +128,6 @@ async function NewsPageContent({
 		sponsorsResult,
 		eventsResult,
 		categoriesResult,
-		locationsResult,
 	] = await Promise.all([
 		// Hero article - no placement field, just get first published article
 		(async () => {
@@ -168,7 +203,7 @@ async function NewsPageContent({
 				return { docs: [] };
 			}
 		})(),
-		// TODO: Create categories collection and uncomment fetch below
+		// Fetch categories
 		(async () => {
 			try {
 				return await payload.find({
@@ -178,26 +213,6 @@ async function NewsPageContent({
 				});
 			} catch (e) {
 				console.warn("News: categories collection not found", e);
-				return { docs: [] };
-			}
-		})(),
-		// Fetch locations for dropdown
-		(async () => {
-			try {
-				const result = await payload.find({
-					collection: "locations",
-					sort: "name",
-					limit: 20,
-					overrideAccess: true,
-				});
-				console.log(
-					"✅ Locations fetched:",
-					result.docs.length,
-					result.docs,
-				);
-				return result;
-			} catch (e) {
-				console.error("❌ Error fetching locations:", e);
 				return { docs: [] };
 			}
 		})(),

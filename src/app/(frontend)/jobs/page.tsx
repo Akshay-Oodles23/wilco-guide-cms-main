@@ -107,13 +107,23 @@ interface Job {
 function normalizeJob(doc: any): Job {
 	const salary = doc.salary;
 	const loc = doc.location;
-	const cityLabel = loc?.city
-		? String(loc.city)
+
+	// Handle city as a relationship object
+	let cityLabel: string | null = null;
+	if (loc?.city) {
+		if (typeof loc.city === "object") {
+			// City is now a relationship object with 'name' and 'slug'
+			cityLabel = loc.city.name;
+		} else {
+			// Fallback for old string format
+			cityLabel = String(loc.city)
 				.replace(/-/g, " ")
-				.replace(/\b\w/g, (c: string) => c.toUpperCase())
-		: null;
+				.replace(/\b\w/g, (c: string) => c.toUpperCase());
+		}
+	}
+
 	const locationStr =
-		[cityLabel, loc?.state].filter(Boolean).join(", ") || undefined;
+		[cityLabel, loc?.state || "TX"].filter(Boolean).join(", ") || undefined;
 	return {
 		id: doc.id,
 		title: doc.title,

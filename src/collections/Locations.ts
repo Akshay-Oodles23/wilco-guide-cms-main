@@ -22,29 +22,31 @@ export const Locations: CollectionConfig = {
 			name: "name",
 			type: "text",
 			required: true,
-			label: "Location Name",
-			admin: {
-				description: "e.g., Round Rock, Georgetown, Leander",
-			},
 		},
 		{
 			name: "slug",
 			type: "text",
 			required: true,
-			unique: true,
-			label: "URL Slug",
-			admin: {
-				description:
-					"Auto-generated, e.g., round-rock, georgetown, leander",
-			},
+		},
+		{
+			name: "state",
+			type: "text",
+			required: true,
+		},
+		{
+			name: "country",
+			type: "text",
+			required: true,
+			defaultValue: "US",
+		},
+		{
+			name: "isDefault",
+			type: "checkbox",
+			defaultValue: false,
 		},
 		{
 			name: "description",
-			type: "text",
-			label: "Description",
-			admin: {
-				description: "Optional short description of the city",
-			},
+			type: "textarea",
 		},
 	],
 };

@@ -231,17 +231,10 @@ async function HomePageContent({
 		status: { not_equals: "inactive" },
 	};
 
-	if (selectedCity) {
-		articleWhere.city = { equals: selectedCity };
-		jobWhere["location.city"] = { equals: selectedCity };
-		businessWhere.or = [
-			{ "address.city": { equals: selectedCity } },
-			...(selectedCityName
-				? [{ "address.city": { equals: selectedCityName } }]
-				: []),
-		];
+	let selectedCityId: string | null = null;
 
-		console.log("📍 Home city filter applied:", selectedCity);
+	if (selectedCity) {
+		console.log("📍 Looking up location by slug:", selectedCity);
 	}
 
 	let articles: any[] = [];
@@ -251,6 +244,62 @@ async function HomePageContent({
 	let businesses: any[] = [];
 	let sponsors: any[] = [];
 	let locations: any[] = [];
+
+	// ═══ FETCH LOCATIONS ═══
+	try {
+		const r = await payload.find({
+			collection: "locations",
+			sort: "name",
+			limit: 50,
+		});
+		locations = r.docs || [];
+		console.log(
+			`📍 [Home Filter] Loaded ${locations.length} cities from CMS:`,
+			locations.map((l: any) => l.name).join(", "),
+		);
+
+		// If a city is selected, find its ID
+		if (selectedCity) {
+			console.log(
+				`🔍 [Home Filter] Looking for city with slug: "${selectedCity}"`,
+			);
+			const cityDoc = locations.find(
+				(loc: any) => loc.slug === selectedCity,
+			);
+			if (cityDoc) {
+				selectedCityId = cityDoc.id;
+				console.log(
+					`✅ [Home Filter] Found location match! "${cityDoc.name}" (ID: ${selectedCityId})`,
+				);
+
+				// Now set up the filter queries using the ID
+				articleWhere.city = {
+					equals: selectedCityId,
+				};
+				jobWhere["location.city"] = {
+					equals: selectedCityId,
+				};
+				businessWhere.or = [
+					{
+						"address.city": {
+							equals: selectedCityId,
+						},
+					},
+				];
+
+				console.log(
+					"📍 City filter configured for ID:",
+					selectedCityId,
+				);
+			} else {
+				console.warn(
+					`⚠️ [Home Filter] City slug "${selectedCity}" not found in CMS locations`,
+				);
+			}
+		}
+	} catch (e) {
+		console.error("❌ Error fetching locations:", e);
+	}
 
 	// ═══ FETCH ALL ARTICLES (without city filter for hero) ═══
 	try {
@@ -267,7 +316,7 @@ async function HomePageContent({
 	}
 
 	// ═══ FETCH FILTERED ARTICLES (for sidebar only) ═══
-	if (selectedCity) {
+	if (selectedCityId) {
 		try {
 			const r = await payload.find({
 				collection: "articles",
@@ -277,22 +326,36 @@ async function HomePageContent({
 				where: articleWhere,
 			});
 			filteredArticles = r.docs || [];
+			console.log(
+				`📰 Filtered articles for city (${selectedCity}):`,
+				filteredArticles.length,
+			);
 		} catch (e) {
 			console.error("Home: failed to fetch filtered articles", e);
 		}
 	}
+
+	// ═══ FETCH JOBS ═══
 	try {
 		const r = await payload.find({
 			collection: "jobs",
 			limit: 8,
 			sort: "-postedAt",
-			depth: 1,
+			depth: 2,
 			where: jobWhere,
 		});
 		jobs = r.docs || [];
+		if (selectedCityId) {
+			console.log(
+				`💼 Filtered jobs for city (${selectedCity}):`,
+				jobs.length,
+			);
+		}
 	} catch (e) {
 		console.error("Home: failed to fetch jobs", e);
 	}
+
+	// ═══ FETCH EVENTS ═══
 	try {
 		const r = await payload.find({
 			collection: "events",
@@ -304,6 +367,8 @@ async function HomePageContent({
 	} catch (e) {
 		console.error("Home: failed to fetch events", e);
 	}
+
+	// ═══ FETCH BUSINESSES ═══
 	try {
 		const r = await payload.find({
 			collection: "businesses",
@@ -312,19 +377,14 @@ async function HomePageContent({
 			where: businessWhere,
 		});
 		businesses = r.docs || [];
+		if (selectedCityId) {
+			console.log(
+				`🏢 Filtered businesses for city (${selectedCity}):`,
+				businesses.length,
+			);
+		}
 	} catch (e) {
 		console.error("Home: failed to fetch businesses", e);
-	}
-
-	try {
-		const r = await payload.find({
-			collection: "locations",
-			sort: "name",
-			limit: 20,
-		});
-		locations = r.docs || [];
-	} catch (e) {
-		console.error("❌ Error fetching locations:", e);
 	}
 
 	const heroArticle = articles[0] || null;
@@ -563,6 +623,16 @@ async function HomePageContent({
 								const firstPhoto = b.photos?.[0]?.photo;
 								const photoUrl = getImageUrl(firstPhoto);
 
+								// Handle city as relationship object
+								let cityName = "";
+								if (b.address?.city) {
+									if (typeof b.address.city === "object") {
+										cityName = b.address.city.name || "";
+									} else {
+										cityName = String(b.address.city);
+									}
+								}
+
 								return {
 									id: b.id,
 									name: b.name || b.title || "Business",
@@ -571,8 +641,7 @@ async function HomePageContent({
 										typeof b.category === "object"
 											? b.category?.name || "Business"
 											: b.category || "Business",
-									location:
-										b.address?.city || getLocationName(b),
+									location: cityName || getLocationName(b),
 									image: photoUrl,
 									rating: b.googleRating || b.rating || null,
 									type: b.type || "business",

@@ -131,18 +131,9 @@ export const Articles: CollectionConfig = {
 		},
 		{
 			name: "city",
-			type: "select",
-			options: [
-				{ label: "Georgetown", value: "georgetown" },
-				{ label: "Round Rock", value: "round-rock" },
-				{ label: "Cedar Park", value: "cedar-park" },
-				{ label: "Leander", value: "leander" },
-				{ label: "Liberty Hill", value: "liberty-hill" },
-				{ label: "Hutto", value: "hutto" },
-				{ label: "Taylor", value: "taylor" },
-				{ label: "Jarrell", value: "jarrell" },
-				{ label: "Florence", value: "florence" },
-			],
+			type: "relationship",
+			relationTo: "locations",
+			index: true,
 			admin: {
 				description: "City this article is primarily about",
 			},

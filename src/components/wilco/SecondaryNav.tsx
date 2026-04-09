@@ -7,7 +7,7 @@ import { NEWSLETTER_BRANDS } from "@/lib/site-config";
 
 interface SecondaryNavProps {
 	categories: Array<{ name: string; slug: string; color: string }>;
-	locations: Array<{ name: string; slug: string }>;
+	locations: Array<{ id: string; name: string; slug: string }>;
 }
 
 export function SecondaryNav({ categories, locations }: SecondaryNavProps) {
@@ -61,7 +61,13 @@ export function SecondaryNav({ categories, locations }: SecondaryNavProps) {
 	}
 
 	function selectLocation(slug: string) {
-		updateParam("location", activeLocation === slug ? "" : slug);
+		const params = new URLSearchParams(searchParams.toString());
+		if (slug) {
+			params.set("location", slug);
+		} else {
+			params.delete("location");
+		}
+		router.push(`/news?${params.toString()}`);
 		setLocOpen(false);
 	}
 

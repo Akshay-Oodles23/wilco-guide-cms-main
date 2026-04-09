@@ -101,8 +101,11 @@ export const Businesses: CollectionConfig = {
 				},
 				{
 					name: "city",
-					type: "text",
+					type: "relationship",
+					relationTo: "locations",
 					label: "City",
+					required: true,
+					index: true,
 				},
 				{
 					name: "state",
