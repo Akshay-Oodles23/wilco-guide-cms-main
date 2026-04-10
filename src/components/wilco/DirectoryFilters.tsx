@@ -2,10 +2,11 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { LocationDropdown } from "./LocationDropdown";
 
 interface DirectoryFiltersProps {
 	categories: string[];
-	locations: string[];
+	locations: Array<{ id: string; name: string; slug: string }>;
 }
 
 const DirectoryFilters: React.FC<DirectoryFiltersProps> = ({
@@ -206,125 +207,8 @@ const DirectoryFilters: React.FC<DirectoryFiltersProps> = ({
 				/>
 			</div>
 
-			{/* Location Dropdown */}
-			<div
-				className='location-dropdown'
-				ref={locationMenuRef}
-				style={{ position: "relative", flex: "0 1 150px" }}
-			>
-				<button
-					className='location-btn'
-					onClick={() => setIsLocationOpen(!isLocationOpen)}
-					style={{
-						width: "100%",
-						padding: "8px 12px",
-						borderRadius: "6px",
-						border: "1px solid #ddd",
-						backgroundColor: "#fff",
-						cursor: "pointer",
-						fontSize: "14px",
-						textAlign: "left",
-						display: "flex",
-						justifyContent: "space-between",
-						alignItems: "center",
-					}}
-					onMouseEnter={(e) =>
-						(e.currentTarget.style.borderColor = "#999")
-					}
-					onMouseLeave={(e) =>
-						(e.currentTarget.style.borderColor = "#ddd")
-					}
-				>
-					<span>{selectedLocation || "All Locations"}</span>
-					<span style={{ fontSize: "12px", marginLeft: "8px" }}>
-						▼
-					</span>
-				</button>
-
-				{/* Location Menu */}
-				{isLocationOpen && (
-					<div
-						className='location-menu'
-						style={{
-							position: "absolute",
-							top: "100%",
-							left: 0,
-							right: 0,
-							backgroundColor: "#fff",
-							border: "1px solid #ddd",
-							borderRadius: "6px",
-							marginTop: "4px",
-							boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-							zIndex: 1000,
-							maxHeight: "200px",
-							overflowY: "auto",
-						}}
-					>
-						<button
-							className='location-option'
-							onClick={() => {
-								setSelectedLocation("");
-								setIsLocationOpen(false);
-								updateFilters(undefined, "");
-							}}
-							style={{
-								display: "flex",
-								alignItems: "center",
-								width: "100%",
-								padding: "12px 12px",
-								border: "none",
-								backgroundColor: "#fff",
-								cursor: "pointer",
-								fontSize: "14px",
-								textAlign: "left",
-
-								borderBottom: "1px solid #f0f0f0",
-							}}
-							onMouseEnter={(e) =>
-								(e.currentTarget.style.backgroundColor =
-									"#f5f5f5")
-							}
-							onMouseLeave={(e) =>
-								(e.currentTarget.style.backgroundColor = "#fff")
-							}
-						>
-							<span style={{ flex: 1 }}>All Locations</span>
-							{!selectedLocation ? "✓" : ""}
-						</button>
-
-						{locations.map((location) => (
-							<button
-								key={location}
-								className='location-option'
-								onClick={() => handleLocationSelect(location)}
-								style={{
-									display: "flex",
-									alignItems: "center",
-									width: "100%",
-									padding: "12px 12px",
-									border: "none",
-									backgroundColor: "#fff",
-									cursor: "pointer",
-									fontSize: "14px",
-									textAlign: "left",
-									borderBottom: "1px solid #f0f0f0",
-								}}
-								onMouseEnter={(e) =>
-									(e.currentTarget.style.backgroundColor =
-										"#f5f5f5")
-								}
-								onMouseLeave={(e) =>
-									(e.currentTarget.style.backgroundColor =
-										"#fff")
-								}
-							>
-								<span style={{ flex: 1 }}>{location}</span>
-								{selectedLocation === location ? "✓" : ""}
-							</button>
-						))}
-					</div>
-				)}
-			</div>
+			{/* Location Dropdown - Using LocationDropdown Component */}
+			<LocationDropdown locations={locations} />
 		</div>
 	);
 };

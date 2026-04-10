@@ -68,8 +68,8 @@ function formatSalary(minSalary?: number, maxSalary?: number): string {
 
 function formatJobType(jobType?: string): string {
 	const typeMap: Record<string, string> = {
-		full_time: "Full-time",
-		part_time: "Part-time",
+		"full-time": "Full-time",
+		"part-time": "Part-time",
 		contract: "Contract",
 		temporary: "Temporary",
 		internship: "Internship",
@@ -80,8 +80,8 @@ function formatJobType(jobType?: string): string {
 function getJobTypeTag(jobType?: string): string {
 	const type = jobType?.toLowerCase() || "full-time";
 	const tagMap: Record<string, string> = {
-		full_time: "jtag-ft",
-		part_time: "jtag-bn",
+		"full-time": "jtag-ft",
+		"part-time": "jtag-bn",
 		contract: "jtag-ur",
 		temporary: "jtag-on",
 		internship: "jtag-ft",
@@ -93,10 +93,13 @@ function formatDate(date?: string | Date): string {
 	if (!date) return "Recently posted";
 	const postDate = new Date(date);
 	const now = new Date();
-	const diffTime = Math.abs(now.getTime() - postDate.getTime());
-	const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+	const diffTime = now.getTime() - postDate.getTime();
+	if (diffTime < 0) return "Posted today";
+	const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+	const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-	if (diffDays === 0) return "Posted today";
+	if (diffHours < 1) return "Posted just now";
+	if (diffHours < 24) return `Posted ${diffHours} hours ago`;
 	if (diffDays === 1) return "Posted yesterday";
 	if (diffDays < 7) return `Posted ${diffDays} days ago`;
 	if (diffDays < 30) return `Posted ${Math.ceil(diffDays / 7)} weeks ago`;
@@ -108,8 +111,14 @@ function formatLocation(location: any): string {
 	if (typeof location === "string") return location;
 	if (typeof location === "object") {
 		const parts = [];
-		if (location.city) parts.push(location.city);
-		if (location.state) parts.push(location.state);
+		if (location.city) {
+			parts.push(
+				typeof location.city === "object"
+					? (location.city.name ?? "")
+					: String(location.city),
+			);
+		}
+		if (location.remote) parts.push("Remote");
 		if (parts.length > 0) return parts.join(", ");
 	}
 	return "";
@@ -207,10 +216,10 @@ export default async function JobDetailPage({
 	}
 
 	const company = job.company || {};
-	const jobType = formatJobType(job.jobType);
-	const jobTypeTag = getJobTypeTag(job.jobType);
-	const salary = formatSalary(job.minSalary, job.maxSalary);
-	const postDate = formatDate(job.createdAt);
+	const jobType = formatJobType(job.employmentType || job.jobType);
+	const jobTypeTag = getJobTypeTag(job.employmentType || job.jobType);
+	const salary = formatSalary(job.salary?.min, job.salary?.max);
+	const postDate = formatDate(job.postedAt || job.createdAt);
 
 	return (
 		<>
@@ -298,7 +307,8 @@ export default async function JobDetailPage({
 										)}
 										{job.industry && (
 											<span className='job-meta-item'>
-												🏥 {job.industry}
+												🏥{" "}
+												{job.category || job.industry}
 											</span>
 										)}
 										<span className='job-meta-item'>
@@ -319,7 +329,7 @@ export default async function JobDetailPage({
 						</div>
 
 						{/* SALARY */}
-						{job.minSalary || job.maxSalary ? (
+						{job.salary?.min || job.salary?.max ? (
 							<div className='salary-banner'>
 								<div>
 									<div className='salary-banner-amount'>
@@ -537,14 +547,17 @@ export default async function JobDetailPage({
 													) || "Location TBA"}{" "}
 													·{" "}
 													{formatJobType(
-														relatedJob.jobType,
+														relatedJob.employmentType ||
+															relatedJob.jobType,
 													)}
 												</div>
 												<div className='mac-bottom'>
 													<span className='mac-salary'>
 														{formatSalary(
-															relatedJob.minSalary,
-															relatedJob.maxSalary,
+															relatedJob.salary
+																?.min,
+															relatedJob.salary
+																?.max,
 														)}
 													</span>
 													<button className='mac-apply'>
@@ -679,9 +692,10 @@ export default async function JobDetailPage({
 												</div>
 												<div className='similar-job-bottom'>
 													<span className='similar-job-salary'>
-														{relatedJob.minSalary &&
-														relatedJob.maxSalary
-															? `$${Math.floor(relatedJob.minSalary / 1000)}K – $${Math.floor(relatedJob.maxSalary / 1000)}K`
+														{relatedJob.salary
+															?.min &&
+														relatedJob.salary?.max
+															? `$${Math.floor(relatedJob.salary.min / 1000)}K – $${Math.floor(relatedJob.salary.max / 1000)}K`
 															: "Competitive"}
 													</span>
 													<span className='similar-job-location'>

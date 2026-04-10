@@ -10,7 +10,8 @@
     "lint": "next lint",
     "generate:types": "payload generate:types",
     "generate:importmap": "payload generate:importmap",
-    "upload:cities": "node scripts/bulk-upload/upload-cities.mjs"
+    "upload:cities": "node scripts/bulk-upload/upload-cities.mjs",
+    "upload:businesses": "node scripts/import-businesses.js"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "^3.76.0",
@@ -21,6 +22,7 @@
     "@payloadcms/translations": "^3.76.0",
     "@payloadcms/ui": "^3.76.0",
     "@vercel/speed-insights": "^1.1.0",
+    "form-data": "^4.0.0",
     "graphql": "^16.9.0",
     "lucide-react": "^0.460.0",
     "next": "^15.4.11",

@@ -224,6 +224,35 @@ export const Jobs: CollectionConfig = {
 			},
 		},
 		{
+			name: "workMode",
+			type: "select",
+			label: "Work Mode",
+			defaultValue: "On-site",
+			options: [
+				{ label: "On-site", value: "On-site" },
+				{ label: "Hybrid", value: "Hybrid" },
+				{ label: "Remote", value: "Remote" },
+			],
+		},
+		{
+			name: "urgent",
+			type: "checkbox",
+			label: "Urgent Hire",
+			defaultValue: false,
+		},
+		{
+			name: "tags",
+			type: "array",
+			label: "Display Tags",
+			fields: [
+				{
+					name: "label",
+					type: "text",
+					required: true,
+				},
+			],
+		},
+		{
 			name: "featured",
 			type: "checkbox",
 			label: "Featured",

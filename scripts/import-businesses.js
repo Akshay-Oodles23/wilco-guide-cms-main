@@ -9,6 +9,7 @@ const businessesData = JSON.parse(fs.readFileSync(dataPath, "utf-8"));
 
 const API_URL = "http://localhost:3000/api/businesses";
 const LOGIN_URL = "http://localhost:3000/api/users/login";
+const MEDIA_URL = "http://localhost:3000/api/media";
 
 // Admin credentials
 const ADMIN_EMAIL = "admin@wilcoguide.com";
@@ -44,6 +45,138 @@ async function login() {
 	}
 }
 
+async function getLocationIdByCity(cityName) {
+	try {
+		const response = await fetch(
+			`http://localhost:3000/api/locations?where[name][equals]=${encodeURIComponent(cityName)}`,
+			{
+				headers: {
+					Authorization: `JWT ${authToken}`,
+				},
+			},
+		);
+
+		if (!response.ok) {
+			return null;
+		}
+
+		const data = await response.json();
+		if (data.docs && data.docs.length > 0) {
+			return data.docs[0].id;
+		}
+
+		return null;
+	} catch (error) {
+		console.error(
+			`Error fetching location for ${cityName}:`,
+			error.message,
+		);
+		return null;
+	}
+}
+
+async function uploadMediaFromUrl(imageUrl) {
+	try {
+		// Download image from URL
+		const imageResponse = await fetch(imageUrl);
+		if (!imageResponse.ok) {
+			console.warn(
+				`   ⚠️  Failed to download image: ${imageUrl} (${imageResponse.status})`,
+			);
+			return null;
+		}
+
+		// Convert Response to Buffer using arrayBuffer()
+		const arrayBuffer = await imageResponse.arrayBuffer();
+		const buffer = Buffer.from(arrayBuffer);
+
+		if (buffer.length === 0) {
+			console.warn(`   ⚠️  Downloaded image is empty from: ${imageUrl}`);
+			return null;
+		}
+
+		// Ensure we have a valid filename
+		const filename = `business-photo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}.jpg`;
+
+		// Create FormData for multipart upload
+		const FormData = require("form-data");
+		const { Readable } = require("stream");
+
+		const formData = new FormData();
+
+		// Append file as a stream for better compatibility
+		const bufferStream = Readable.from(buffer);
+		formData.append("file", bufferStream, {
+			filename,
+			contentType: "image/jpeg",
+		});
+
+		// Add required fields for Media collection
+		formData.append("alt", "Business photo");
+		formData.append("franchise", "1"); // WilCo Guide franchise ID
+
+		// Upload to Payload media collection
+		const uploadResponse = await fetch(MEDIA_URL, {
+			method: "POST",
+			headers: {
+				Authorization: `JWT ${authToken}`,
+				...formData.getHeaders(),
+			},
+			body: formData,
+		});
+
+		if (!uploadResponse.ok) {
+			const errorText = await uploadResponse.text();
+			console.warn(
+				`   ⚠️  Media upload failed for ${filename}: ${errorText}`,
+			);
+			return null;
+		}
+
+		const mediaData = await uploadResponse.json();
+		if (!mediaData.id) {
+			console.warn(
+				`   ⚠️  No media ID returned from upload for ${filename}`,
+			);
+			return null;
+		}
+		return mediaData.id;
+	} catch (error) {
+		console.warn(`   ⚠️  Error uploading media: ${error.message}`);
+		return null;
+	}
+}
+
+async function getBusinessIdBySlug(slug) {
+	try {
+		const response = await fetch(
+			`http://localhost:3000/api/businesses?where[slug][equals]=${encodeURIComponent(slug)}`,
+			{
+				headers: {
+					Authorization: `JWT ${authToken}`,
+				},
+			},
+		);
+
+		if (!response.ok) {
+			return null;
+		}
+
+		const data = await response.json();
+		if (data.docs && data.docs.length > 0) {
+			return data.docs[0].id;
+		}
+
+		return null;
+	} catch (error) {
+		console.error(
+			`Error fetching business by slug ${slug}:`,
+			error.message,
+		);
+		return null;
+	}
+}
+
 async function importBusinesses() {
 	// Authenticate first
 	const authenticated = await login();
@@ -66,6 +199,14 @@ async function importBusinesses() {
 				`⏳ [${i + 1}/${businessesData.length}] Importing: ${business.name}...`,
 			);
 
+			// Get location ID for the city
+			const locationId = await getLocationIdByCity(business.address.city);
+			if (!locationId) {
+				throw new Error(
+					`Location not found for city: ${business.address.city}`,
+				);
+			}
+
 			// Transform amenities array format
 			const amenitiesData = business.amenities
 				? business.amenities.map((amenity) => ({ amenity }))
@@ -81,6 +222,21 @@ async function importBusinesses() {
 					}))
 				: [];
 
+			// Upload photos and collect media IDs
+			const photosData = [];
+			if (business.photos && business.photos.length > 0) {
+				console.log(
+					`   📸 Uploading ${business.photos.length} photos...`,
+				);
+				for (const photoUrl of business.photos) {
+					const mediaId = await uploadMediaFromUrl(photoUrl);
+					if (mediaId) {
+						photosData.push(mediaId);
+						console.log(`   ✅ Photo uploaded (ID: ${mediaId})`);
+					}
+				}
+			}
+
 			// Build the payload
 			const payload = {
 				franchise: 1, // WilCo Guide franchise
@@ -93,7 +249,16 @@ async function importBusinesses() {
 				...(business.subcategory && {
 					subcategory: business.subcategory,
 				}),
-				...(business.address && { address: business.address }),
+				...(business.address && {
+					address: {
+						street: business.address.street,
+						city: locationId, // Use location ID instead of city name
+						state: business.address.state,
+						zip: business.address.zip,
+						lat: business.address.lat,
+						lng: business.address.lng,
+					},
+				}),
 				...(business.phone && { phone: business.phone }),
 				...(business.email && { email: business.email }),
 				...(business.website && { website: business.website }),
@@ -106,6 +271,7 @@ async function importBusinesses() {
 				...(business.priceRange && { priceRange: business.priceRange }),
 				...(amenitiesData.length && { amenities: amenitiesData }),
 				...(reviewsData.length && { reviews: reviewsData }),
+				...(photosData.length && { photos: photosData }),
 				...(business.hours && { hours: business.hours }),
 				...(business.deals &&
 					business.deals.length && {
@@ -165,8 +331,21 @@ async function importBusinesses() {
 					}),
 			};
 
-			const response = await fetch(API_URL, {
-				method: "POST",
+			// Check if business already exists
+			const existingBusinessId = await getBusinessIdBySlug(business.slug);
+
+			let method = "POST";
+			let url = API_URL;
+			let successMessage = `Successfully imported`;
+
+			if (existingBusinessId) {
+				method = "PATCH";
+				url = `${API_URL}/${existingBusinessId}`;
+				successMessage = `Successfully updated`;
+			}
+
+			const response = await fetch(url, {
+				method,
 				headers: {
 					"Content-Type": "application/json",
 					Authorization: `JWT ${authToken}`,
@@ -183,8 +362,9 @@ async function importBusinesses() {
 			}
 
 			const result = await response.json();
+			const resultId = result.id || existingBusinessId || "unknown";
 			console.log(
-				`✅ Successfully imported: ${business.name} (ID: ${result.id})\n`,
+				`✅ ${successMessage}: ${business.name} (ID: ${resultId})\n`,
 			);
 			successCount++;
 		} catch (error) {

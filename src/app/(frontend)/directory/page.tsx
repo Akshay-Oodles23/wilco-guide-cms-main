@@ -8,6 +8,7 @@ import "@/styles/directory.css";
 import DirectorySpotlight from "@/components/wilco/DirectorySpotlight";
 import DirectoryFilters from "@/components/wilco/DirectoryFilters";
 import StarRating from "@/components/StarRating";
+import { getLocationsWithCache } from "@/lib/location-cache";
 /* ═══════════════════════════════════════
    DIRECTORY PAGE — WilCo Guide
    Matches "WilCo Guide - Directory Home Page.html" design.
@@ -88,7 +89,32 @@ export default async function DirectoryPage(props: {
 	let businesses: any[] = [];
 	let categories: any[] = [];
 	let locations: any[] = [];
+	let selectedLocationId: string | null = null;
 
+	// ═══ FETCH LOCATIONS (CACHED) ═══
+	locations = await getLocationsWithCache();
+
+	// If a location is selected, find its ID
+	if (selectedLocation) {
+		console.log(
+			`🔍 [Directory Filter] Looking for location with slug: "${selectedLocation}"`,
+		);
+		const locationDoc = locations.find(
+			(loc: any) => loc.slug === selectedLocation,
+		);
+		if (locationDoc) {
+			selectedLocationId = locationDoc.id;
+			console.log(
+				`✅ [Directory Filter] Found location match! "${locationDoc.name}" (ID: ${selectedLocationId})`,
+			);
+		} else {
+			console.warn(
+				`⚠️ [Directory Filter] Location slug "${selectedLocation}" not found in CMS locations`,
+			);
+		}
+	}
+
+	// ═══ FETCH BUSINESSES ═══
 	try {
 		const r = await payload.find({
 			collection: "businesses",
@@ -112,20 +138,24 @@ export default async function DirectoryPage(props: {
 		categories = [];
 	}
 
-	// Try to fetch locations, but don't fail if collection doesn't exist
-	try {
-		const r = await payload.find({ collection: "locations", limit: 20 });
-		locations = r.docs || [];
-	} catch (e) {
-		console.warn(
-			"Directory: locations collection not found, using fallback",
-			e,
-		);
-		locations = [];
-	}
-
 	/* ═══ FILTER BUSINESSES ═══ */
 	let filteredBusinesses = businesses;
+
+	// Filter by location (using ID if found)
+	if (selectedLocationId) {
+		console.log(
+			`📋 [Directory Filter] Filtering businesses by location ID: ${selectedLocationId}`,
+		);
+		filteredBusinesses = filteredBusinesses.filter((b: any) => {
+			// Check if business's address.city matches the location ID
+			const businessLocationId =
+				typeof b.address?.city === "object" ? b.address.city?.id : null;
+			return businessLocationId === selectedLocationId;
+		});
+		console.log(
+			`📊 [Directory Filter] Found ${filteredBusinesses.length} businesses for this location`,
+		);
+	}
 
 	// Filter by category
 	if (selectedCategory && selectedCategory !== "All") {
@@ -134,16 +164,6 @@ export default async function DirectoryPage(props: {
 				typeof b.category === "object" ? b.category?.name : b.category;
 			return (
 				bizCategory?.toLowerCase() === selectedCategory.toLowerCase()
-			);
-		});
-	}
-
-	// Filter by location
-	if (selectedLocation && selectedLocation !== "All WilCo") {
-		filteredBusinesses = filteredBusinesses.filter((b: any) => {
-			const bizLocation = getBusinessLocation(b);
-			return (
-				bizLocation?.toLowerCase() === selectedLocation.toLowerCase()
 			);
 		});
 	}
@@ -595,7 +615,7 @@ export default async function DirectoryPage(props: {
 			{/* Directory-specific secondary nav */}
 			<DirectoryFilters
 				categories={categoryNames}
-				locations={locationNames}
+				locations={locations}
 			/>
 
 			<div className='directory-page'>

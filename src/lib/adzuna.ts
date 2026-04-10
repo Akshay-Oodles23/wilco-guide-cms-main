@@ -82,9 +82,9 @@ export async function fetchAdzunaJobs(
 ): Promise<AdzunaJob[]> {
 	const {
 		what = "",
-		where = "round rock tx",
+		where = "texas",
 		page = 1,
-		resultsPerPage = 20,
+		resultsPerPage = 50,
 		country = COUNTRY_US,
 	} = options;
 
@@ -116,7 +116,7 @@ export async function fetchAdzunaJobs(
 }
 
 /**
- * Fetch multiple pages of results (e.g. 3 pages = 60 jobs for Williamson County area).
+ * Fetch multiple pages of results (e.g. 5 pages x 50 = up to 250 Texas jobs).
  */
 export async function fetchAdzunaJobsMultiPage(
 	appId: string,
@@ -129,8 +129,8 @@ export async function fetchAdzunaJobsMultiPage(
 		country?: AdzunaCountry;
 	} = {},
 ): Promise<AdzunaJob[]> {
-	const maxPages = options.maxPages ?? 3;
-	const resultsPerPage = options.resultsPerPage ?? 20;
+	const maxPages = options.maxPages ?? 5;
+	const resultsPerPage = options.resultsPerPage ?? 50;
 	const all: AdzunaJob[] = [];
 	const seen = new Set<string>();
 

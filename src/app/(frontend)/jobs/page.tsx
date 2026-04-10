@@ -15,19 +15,11 @@ export const metadata: Metadata = {
 		"The best place to find and post jobs across Williamson County",
 };
 
-// Location mapping for filtering
-const LOCATION_KEYWORDS: Record<string, string[]> = {
-	leander: ["leander"],
-	"cedar-park": ["cedar park"],
-	"round-rock": ["round rock"],
-	georgetown: ["georgetown"],
-	"liberty-hill": ["liberty hill"],
-	hutto: ["hutto"],
-	taylor: ["taylor"],
-	jarrell: ["jarrell"],
-	florence: ["florence"],
-	tx: ["texas", "tx"],
-};
+// Will be populated from CMS locations
+let LOCATION_KEYWORDS: Record<string, string[]> = {};
+
+// Pagination configuration
+const JOBS_PER_PAGE = 20;
 
 // Helper functions
 function formatSalary(
@@ -75,20 +67,31 @@ function getImageUrl(image: any): string {
 function formatDate(date: string | Date): string {
 	const d = new Date(date);
 	const now = new Date();
-	const diffTime = Math.abs(now.getTime() - d.getTime());
-	const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+	const diffTime = now.getTime() - d.getTime();
+	if (diffTime < 0) return "Today";
+	const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+	const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-	if (diffDays === 0) return "Today";
+	if (diffHours < 1) return "Just now";
+	if (diffHours < 24) return `${diffHours}h ago`;
 	if (diffDays === 1) return "1d ago";
 	if (diffDays < 7) return `${diffDays}d ago`;
 	if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
 	return d.toLocaleDateString();
 }
 
+function formatCategoryName(category: string): string {
+	return category
+		.split("-")
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+		.join(" ");
+}
+
 interface Job {
 	id: string;
 	title: string;
 	company?: { id: string; name: string; logo?: any } | string;
+	category?: string;
 	salaryMin?: number;
 	salaryMax?: number;
 	isHourly?: boolean;
@@ -98,6 +101,9 @@ interface Job {
 	featured?: boolean;
 	premium?: boolean;
 	tags?: string[];
+	urgent?: boolean;
+	workMode?: string;
+	postedAt?: string;
 	createdAt: string;
 	image?: any;
 	applicationUrl?: string;
@@ -124,21 +130,42 @@ function normalizeJob(doc: any): Job {
 
 	const locationStr =
 		[cityLabel, loc?.state || "TX"].filter(Boolean).join(", ") || undefined;
+	const employmentRaw = String(
+		doc.employmentType ?? doc.jobType ?? "",
+	).toLowerCase();
+	const employmentDisplay =
+		employmentRaw === "part-time"
+			? "Part-time"
+			: employmentRaw === "contract"
+				? "Contract"
+				: employmentRaw === "internship"
+					? "Internship"
+					: "Full-time";
 	return {
 		id: doc.id,
 		title: doc.title,
 		company:
 			doc.company ??
 			(typeof doc.company === "object" ? doc.company?.name : undefined),
+		category: doc.category,
 		salaryMin: salary?.min != null ? Number(salary.min) : doc.salaryMin,
 		salaryMax: salary?.max != null ? Number(salary.max) : doc.salaryMax,
 		isHourly: salary?.type === "hourly" || doc.isHourly,
 		location: locationStr ?? doc.location,
-		jobType: doc.employmentType ?? doc.jobType,
+		jobType: employmentDisplay,
 		description: doc.description,
 		featured: doc.featured,
 		premium: doc.premium,
-		tags: doc.tags,
+		tags: Array.isArray(doc.tags)
+			? doc.tags
+					.map((t: any) =>
+						typeof t === "string" ? t : (t?.label ?? ""),
+					)
+					.filter(Boolean)
+			: [],
+		urgent: Boolean(doc.urgent),
+		workMode: doc.workMode,
+		postedAt: doc.postedAt ?? doc.createdAt ?? doc.created,
 		createdAt: doc.createdAt ?? doc.created,
 		image: doc.image,
 		applicationUrl: doc.applicationUrl ?? doc.applyUrl ?? doc.url,
@@ -166,8 +193,8 @@ async function fetchJobs(): Promise<Job[]> {
 
 		const result = await payload.find({
 			collection: "jobs",
-			sort: "-createdAt",
-			limit: 60,
+			sort: "-postedAt",
+			limit: 500,
 			depth: 1,
 		});
 
@@ -242,15 +269,60 @@ async function fetchSponsors(): Promise<Sponsor[]> {
 	}
 }
 
+async function fetchLocations(): Promise<
+	Array<{ name: string; slug: string }>
+> {
+	try {
+		const payload = await getPayload({ config });
+		console.log("📦 Fetching locations from Payload CMS...");
+
+		const result = await payload.find({
+			collection: "locations",
+			limit: 100,
+			depth: 0,
+		});
+
+		console.log(
+			`✅ Locations fetch complete! Found: ${result.docs.length}`,
+		);
+
+		const locations = (result.docs as any[])
+			.filter((loc) => loc?.name && loc?.slug)
+			.map((loc) => ({
+				name: loc.name,
+				slug: String(loc.slug).toLowerCase(),
+			}))
+			.sort((a, b) => a.name.localeCompare(b.name));
+
+		// Build location keyword mapping for filtering
+		LOCATION_KEYWORDS = {};
+		for (const loc of locations) {
+			LOCATION_KEYWORDS[loc.slug] = [loc.name.toLowerCase()];
+		}
+
+		console.log("📍 Location keywords mapping:", LOCATION_KEYWORDS);
+		return locations;
+	} catch (error) {
+		console.error("❌ Error fetching locations:", error);
+		return [];
+	}
+}
+
 export default async function JobsPage({
 	searchParams,
 }: {
-	searchParams: Promise<{ location?: string; search?: string }>;
+	searchParams: Promise<{
+		location?: string;
+		search?: string;
+		category?: string;
+		page?: string;
+	}>;
 }) {
 	const params = await searchParams;
 	const jobs = await fetchJobs();
 	const businesses = await fetchBusinesses();
 	const sponsors = await fetchSponsors();
+	const locations = await fetchLocations();
 
 	// Get selected location from URL
 	const selectedLocationSlug = params.location || "";
@@ -260,6 +332,7 @@ export default async function JobsPage({
 
 	// Get search query from URL
 	const searchQuery = params.search || "";
+	const selectedCategory = params.category || "";
 
 	// Use a fixed date for consistency (2 days ago from reference date)
 	// This prevents hydration mismatches caused by Date.now() differences between server and client
@@ -638,6 +711,18 @@ export default async function JobsPage({
 	];
 
 	const displaySponsors = sponsors.length > 0 ? sponsors : fallbackSponsors;
+	const availableCategories = Array.from(
+		new Set(
+			jobs
+				.map((job) => job.category)
+				.filter((category): category is string => Boolean(category)),
+		),
+	)
+		.sort((a, b) => a.localeCompare(b))
+		.map((category) => ({
+			name: formatCategoryName(category),
+			slug: category,
+		}));
 
 	// Filter function for location
 	const filterJobsByLocation = (jobsList: Job[]): Job[] => {
@@ -651,6 +736,18 @@ export default async function JobsPage({
 				jobLocationLower.includes(keyword.toLowerCase()),
 			);
 		});
+	};
+
+	const filterJobsByCategory = (jobsList: Job[]): Job[] => {
+		if (!selectedCategory) {
+			return jobsList;
+		}
+
+		return jobsList.filter(
+			(job) =>
+				String(job.category || "").toLowerCase() ===
+				selectedCategory.toLowerCase(),
+		);
 	};
 
 	// NEW: Filter function for search keywords
@@ -692,13 +789,28 @@ export default async function JobsPage({
 
 	// Apply both location and search filters
 	const filteredByLocation = filterJobsByLocation(allPremiumJobs);
-	const displayPremiumJobs = filterJobsBySearch(filteredByLocation);
+	const filteredByCategory = filterJobsByCategory(filteredByLocation);
+	const displayPremiumJobs = filterJobsBySearch(filteredByCategory);
 
 	const filteredByLocation2 = filterJobsByLocation(allFeaturedJobs);
-	const displayFeaturedJobs = filterJobsBySearch(filteredByLocation2);
+	const filteredByCategory2 = filterJobsByCategory(filteredByLocation2);
+	const displayFeaturedJobs = filterJobsBySearch(filteredByCategory2);
 
 	const filteredByLocation3 = filterJobsByLocation(allStandardJobs);
-	const displayStandardJobs = filterJobsBySearch(filteredByLocation3);
+	const filteredByCategory3 = filterJobsByCategory(filteredByLocation3);
+	const allFilteredStandardJobs = filterJobsBySearch(filteredByCategory3);
+
+	// Pagination for standard jobs
+	const currentPage = Math.max(1, parseInt(params.page || "1", 10));
+	const totalJobs = allFilteredStandardJobs.length;
+	const totalPages = Math.ceil(totalJobs / JOBS_PER_PAGE);
+	const startIndex = (currentPage - 1) * JOBS_PER_PAGE;
+	const endIndex = startIndex + JOBS_PER_PAGE;
+	const displayStandardJobs = allFilteredStandardJobs.slice(
+		startIndex,
+		endIndex,
+	);
+
 	const displayBusinesses =
 		businesses.length > 0 ? businesses : fallbackBusinesses;
 
@@ -757,7 +869,10 @@ export default async function JobsPage({
 				</p>
 
 				{/* SEARCH BAR COMPONENT */}
-				<JobsSearchBar />
+				<JobsSearchBar
+					locations={locations}
+					categories={availableCategories}
+				/>
 			</div>
 
 			{/* PREMIUM JOBS */}
@@ -830,7 +945,10 @@ export default async function JobsPage({
 											</span>
 										)}
 										<span className='jobs-premium-meta-item'>
-											📅 {formatDate(job.createdAt)}
+											📅{" "}
+											{formatDate(
+												job.postedAt || job.createdAt,
+											)}
 										</span>
 									</div>
 								</div>
@@ -938,7 +1056,9 @@ export default async function JobsPage({
 											{getCompanyName(job.company)}
 										</div>
 										<div className='jobs-featured-posted-sm'>
-											{formatDate(job.createdAt)}
+											{formatDate(
+												job.postedAt || job.createdAt,
+											)}
 										</div>
 									</div>
 								</div>
@@ -1033,9 +1153,7 @@ export default async function JobsPage({
 			{/* TWO-COLUMN: STANDARD LISTINGS + SIDEBAR */}
 			<div className='jobs-section-header'>
 				<h2 className='jobs-section-title'>All Open Positions</h2>
-				<span className='jobs-section-count'>
-					{displayStandardJobs.length} jobs
-				</span>
+				<span className='jobs-section-count'>{totalJobs} jobs</span>
 			</div>
 			{displayStandardJobs.length > 0 ? (
 				<div className='jobs-listings-layout'>
@@ -1087,7 +1205,9 @@ export default async function JobsPage({
 										)}
 									</span>
 									<span className='jobs-standard-date'>
-										{formatDate(job.createdAt)}
+										{formatDate(
+											job.postedAt || job.createdAt,
+										)}
 									</span>
 									{job.applicationUrl ? (
 										<a
@@ -1120,35 +1240,160 @@ export default async function JobsPage({
 								</div>
 							))}
 						</div>
-						{displayStandardJobs.length > 0 ? (
-							<div
-								style={{
-									padding: "20px",
-									textAlign: "center",
-								}}
-							>
-								<p
-									style={{
-										color: "#666",
-										fontSize: "14px",
-										marginBottom: "10px",
-									}}
-								>
-									Showing all {displayStandardJobs.length}{" "}
-									jobs
-								</p>
-							</div>
-						) : (
-							<div className='jobs-load-more'>
-								<button
-									className='jobs-load-more-btn'
-									style={{
-										opacity: 0.5,
-										cursor: "not-allowed",
-									}}
-								>
-									No More Jobs
-								</button>
+						{/* Pagination Controls */}
+						{totalPages > 1 && (
+							<div className='jobs-pagination'>
+								{/* Previous Button */}
+								<div className='jobs-pagination-left'>
+									{currentPage > 1 ? (
+										<Link
+											href={`/jobs?${new URLSearchParams({
+												...(params.location && {
+													location: params.location,
+												}),
+												...(params.search && {
+													search: params.search,
+												}),
+												...(params.category && {
+													category: params.category,
+												}),
+												page: String(currentPage - 1),
+											}).toString()}`}
+											className='jobs-pagination-btn jobs-pagination-prev'
+										>
+											← Previous
+										</Link>
+									) : (
+										<button
+											className='jobs-pagination-btn jobs-pagination-disabled'
+											disabled
+										>
+											← Previous
+										</button>
+									)}
+								</div>
+
+								{/* Page Numbers */}
+								<div className='jobs-pagination-center'>
+									{/* <div className='jobs-pagination-info'>
+										Showing {startIndex + 1}-
+										{Math.min(endIndex, totalJobs)} of{" "}
+										{totalJobs} jobs
+									</div> */}
+									<div className='jobs-pagination-numbers'>
+										{(() => {
+											const pages: (number | string)[] =
+												[];
+											const showPages = 5; // Show first 5 pages
+											const endPages = 4; // Show last 4 pages
+
+											if (totalPages <= 10) {
+												// Show all pages if total is 10 or less
+												for (
+													let i = 1;
+													i <= totalPages;
+													i++
+												) {
+													pages.push(i);
+												}
+											} else {
+												// Show first pages
+												for (
+													let i = 1;
+													i <= showPages;
+													i++
+												) {
+													pages.push(i);
+												}
+
+												// Add ellipsis
+												pages.push("ellipsis1");
+
+												// Show last pages
+												for (
+													let i =
+														totalPages -
+														endPages +
+														1;
+													i <= totalPages;
+													i++
+												) {
+													pages.push(i);
+												}
+											}
+
+											return pages.map((page, idx) => {
+												if (typeof page === "string") {
+													return (
+														<span
+															key={page}
+															className='jobs-pagination-ellipsis'
+														>
+															...
+														</span>
+													);
+												}
+
+												return (
+													<Link
+														key={page}
+														href={`/jobs?${new URLSearchParams(
+															{
+																...(params.location && {
+																	location:
+																		params.location,
+																}),
+																...(params.search && {
+																	search: params.search,
+																}),
+																...(params.category && {
+																	category:
+																		params.category,
+																}),
+																page: String(
+																	page,
+																),
+															},
+														).toString()}`}
+														className={`jobs-pagination-number ${page === currentPage ? "jobs-pagination-active" : ""}`}
+													>
+														{page}
+													</Link>
+												);
+											});
+										})()}
+									</div>
+								</div>
+
+								{/* Next Button */}
+								<div className='jobs-pagination-right'>
+									{currentPage < totalPages ? (
+										<Link
+											href={`/jobs?${new URLSearchParams({
+												...(params.location && {
+													location: params.location,
+												}),
+												...(params.search && {
+													search: params.search,
+												}),
+												...(params.category && {
+													category: params.category,
+												}),
+												page: String(currentPage + 1),
+											}).toString()}`}
+											className='jobs-pagination-btn jobs-pagination-next'
+										>
+											Next →
+										</Link>
+									) : (
+										<button
+											className='jobs-pagination-btn jobs-pagination-disabled'
+											disabled
+										>
+											Next →
+										</button>
+									)}
+								</div>
 							</div>
 						)}
 					</div>

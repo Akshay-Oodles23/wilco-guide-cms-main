@@ -3,35 +3,43 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-interface Location {
+export interface Location {
 	name: string;
 	slug: string;
 }
 
-const LOCATIONS: Location[] = [
-	{ name: "All Williamson County", slug: "" },
-	{ name: "Leander", slug: "leander" },
-	{ name: "Cedar Park", slug: "cedar-park" },
-	{ name: "Round Rock", slug: "round-rock" },
-	{ name: "Georgetown", slug: "georgetown" },
-	{ name: "Liberty Hill", slug: "liberty-hill" },
-	{ name: "Hutto", slug: "hutto" },
-	{ name: "Taylor", slug: "taylor" },
-	{ name: "Jarrell", slug: "jarrell" },
-	{ name: "Florence", slug: "florence" },
-];
+export interface JobCategory {
+	name: string;
+	slug: string;
+}
 
 interface JobsSearchBarProps {
+	locations: Location[];
+	categories: JobCategory[];
 	onLocationChange?: (location: string) => void;
 }
 
-export function JobsSearchBar({ onLocationChange }: JobsSearchBarProps) {
+export function JobsSearchBar({
+	locations,
+	categories,
+	onLocationChange,
+}: JobsSearchBarProps) {
+	const LOCATIONS: Location[] = [
+		{ name: "All Williamson County", slug: "" },
+		...locations,
+	];
+	const CATEGORIES: JobCategory[] = [
+		{ name: "All Categories", slug: "" },
+		...categories,
+	];
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const [selectedLocation, setSelectedLocation] = useState(
 		"All Williamson County",
 	);
-	const [isOpen, setIsOpen] = useState(false);
+	const [selectedCategory, setSelectedCategory] = useState("All Categories");
+	const [isLocationOpen, setIsLocationOpen] = useState(false);
+	const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -48,19 +56,35 @@ export function JobsSearchBar({ onLocationChange }: JobsSearchBarProps) {
 			setSelectedLocation("All Williamson County");
 		}
 
+		const categoryParam = searchParams.get("category");
+		if (categoryParam) {
+			const category = CATEGORIES.find(
+				(cat) => cat.slug === categoryParam,
+			);
+			if (category) {
+				setSelectedCategory(category.name);
+			}
+		} else {
+			setSelectedCategory("All Categories");
+		}
+
 		// Sync search query from URL params
 		const searchParam = searchParams.get("search");
 		setSearchQuery(searchParam || "");
-	}, [searchParams]);
+	}, [searchParams, locations, categories]);
 
 	const handleLocationSelect = (name: string, slug: string) => {
 		setSelectedLocation(name);
-		setIsOpen(false);
+		setIsLocationOpen(false);
 
 		// Build URL with both location and search parameters
 		const params = new URLSearchParams();
 		if (slug) {
 			params.set("location", slug);
+		}
+		const categoryParam = searchParams.get("category");
+		if (categoryParam) {
+			params.set("category", categoryParam);
 		}
 		if (searchQuery) {
 			params.set("search", searchQuery);
@@ -78,6 +102,28 @@ export function JobsSearchBar({ onLocationChange }: JobsSearchBarProps) {
 		}
 	};
 
+	const handleCategorySelect = (name: string, slug: string) => {
+		setSelectedCategory(name);
+		setIsCategoryOpen(false);
+
+		const params = new URLSearchParams();
+		const locationParam = searchParams.get("location");
+		if (locationParam) {
+			params.set("location", locationParam);
+		}
+		if (slug) {
+			params.set("category", slug);
+		}
+		if (searchQuery) {
+			params.set("search", searchQuery);
+		}
+
+		const newUrl = params.toString()
+			? `/jobs?${params.toString()}`
+			: "/jobs";
+		router.push(newUrl);
+	};
+
 	const handleSearch = (query: string) => {
 		setSearchQuery(query);
 
@@ -90,8 +136,12 @@ export function JobsSearchBar({ onLocationChange }: JobsSearchBarProps) {
 			// Build URL with both location and search parameters
 			const params = new URLSearchParams();
 			const locationParam = searchParams.get("location");
+			const categoryParam = searchParams.get("category");
 			if (locationParam) {
 				params.set("location", locationParam);
+			}
+			if (categoryParam) {
+				params.set("category", categoryParam);
 			}
 			if (query) {
 				params.set("search", query);
@@ -111,8 +161,12 @@ export function JobsSearchBar({ onLocationChange }: JobsSearchBarProps) {
 		// Build URL with location parameter only
 		const params = new URLSearchParams();
 		const locationParam = searchParams.get("location");
+		const categoryParam = searchParams.get("category");
 		if (locationParam) {
 			params.set("location", locationParam);
+		}
+		if (categoryParam) {
+			params.set("category", categoryParam);
 		}
 
 		// Navigate to update URL
@@ -182,80 +236,163 @@ export function JobsSearchBar({ onLocationChange }: JobsSearchBarProps) {
 				)}
 			</div>
 
-			{/* Location Dropdown */}
-			<div className='relative'>
-				<button
-					onClick={() => setIsOpen(!isOpen)}
-					className='w-full flex items-center justify-between rounded-2xl border-2 border-gray-200 bg-white px-4 py-3 text-left shadow-md hover:border-gray-300 transition'
-				>
-					<div className='flex items-center gap-3'>
+			<div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+				{/* Location Dropdown */}
+				<div className='relative'>
+					<button
+						onClick={() => {
+							setIsLocationOpen(!isLocationOpen);
+							setIsCategoryOpen(false);
+						}}
+						className='w-full flex items-center justify-between rounded-2xl border-2 border-gray-200 bg-white px-4 py-3 text-left shadow-md hover:border-gray-300 transition'
+					>
+						<div className='flex items-center gap-3'>
+							<svg
+								className='w-[18px] h-[18px] text-gray-600 flex-shrink-0'
+								viewBox='0 0 24 24'
+								fill='none'
+								stroke='currentColor'
+								strokeWidth='2.5'
+							>
+								<path d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z' />
+								<circle
+									cx='12'
+									cy='10'
+									r='3'
+								/>
+							</svg>
+							<span className='text-gray-900 font-semibold'>
+								{selectedLocation}
+							</span>
+						</div>
 						<svg
-							className='w-[18px] h-[18px] text-gray-600 flex-shrink-0'
+							className={`w-[14px] h-[14px] text-gray-600 flex-shrink-0 transition-transform ${
+								isLocationOpen ? "rotate-180" : ""
+							}`}
 							viewBox='0 0 24 24'
 							fill='none'
 							stroke='currentColor'
-							strokeWidth='2.5'
+							strokeWidth='3'
 						>
-							<path d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z' />
-							<circle
-								cx='12'
-								cy='10'
-								r='3'
-							/>
+							<polyline points='6 9 12 15 18 9' />
 						</svg>
-						<span className='text-gray-900 font-semibold'>
-							{selectedLocation}
-						</span>
-					</div>
-					<svg
-						className={`w-[14px] h-[14px] text-gray-600 flex-shrink-0 transition-transform ${
-							isOpen ? "rotate-180" : ""
-						}`}
-						viewBox='0 0 24 24'
-						fill='none'
-						stroke='currentColor'
-						strokeWidth='3'
-					>
-						<polyline points='6 9 12 15 18 9' />
-					</svg>
-				</button>
+					</button>
 
-				{/* Dropdown Menu */}
-				{isOpen && (
-					<div className='absolute top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-10'>
-						{LOCATIONS.map((location) => (
-							<button
-								key={location.slug}
-								onClick={() =>
-									handleLocationSelect(
-										location.name,
-										location.slug,
-									)
-								}
-								className={`w-full px-4 py-3 text-left hover:bg-blue-50 transition flex items-center justify-between border-b border-gray-100 last:border-b-0 ${
-									selectedLocation === location.name
-										? "bg-blue-50"
-										: ""
-								}`}
-							>
-								<span
-									className={
-										selectedLocation === location.name
-											? "text-blue-600 font-semibold"
-											: "text-gray-700"
+					{isLocationOpen && (
+						<div
+							className='absolute top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-10'
+							style={{ maxHeight: "300px", overflowY: "auto" }}
+						>
+							{LOCATIONS.map((location) => (
+								<button
+									key={location.slug}
+									onClick={() =>
+										handleLocationSelect(
+											location.name,
+											location.slug,
+										)
 									}
+									className={`w-full px-4 py-3 text-left hover:bg-blue-50 transition flex items-center justify-between border-b border-gray-100 last:border-b-0 ${
+										selectedLocation === location.name
+											? "bg-blue-50"
+											: ""
+									}`}
 								>
-									{location.name}
-								</span>
-								{selectedLocation === location.name && (
-									<span className='text-blue-600 font-bold'>
-										✓
+									<span
+										className={
+											selectedLocation === location.name
+												? "text-blue-600 font-semibold"
+												: "text-gray-700"
+										}
+									>
+										{location.name}
 									</span>
-								)}
-							</button>
-						))}
-					</div>
-				)}
+									{selectedLocation === location.name && (
+										<span className='text-blue-600 font-bold'>
+											✓
+										</span>
+									)}
+								</button>
+							))}
+						</div>
+					)}
+				</div>
+
+				{/* Category Dropdown */}
+				<div className='relative'>
+					<button
+						onClick={() => {
+							setIsCategoryOpen(!isCategoryOpen);
+							setIsLocationOpen(false);
+						}}
+						className='w-full flex items-center justify-between rounded-2xl border-2 border-gray-200 bg-white px-4 py-3 text-left shadow-md hover:border-gray-300 transition'
+					>
+						<div className='flex items-center gap-3'>
+							<svg
+								className='w-[18px] h-[18px] text-gray-600 flex-shrink-0'
+								viewBox='0 0 24 24'
+								fill='none'
+								stroke='currentColor'
+								strokeWidth='2.5'
+							>
+								<path d='M4 6h16M7 12h10M10 18h4' />
+							</svg>
+							<span className='text-gray-900 font-semibold'>
+								{selectedCategory}
+							</span>
+						</div>
+						<svg
+							className={`w-[14px] h-[14px] text-gray-600 flex-shrink-0 transition-transform ${
+								isCategoryOpen ? "rotate-180" : ""
+							}`}
+							viewBox='0 0 24 24'
+							fill='none'
+							stroke='currentColor'
+							strokeWidth='3'
+						>
+							<polyline points='6 9 12 15 18 9' />
+						</svg>
+					</button>
+
+					{isCategoryOpen && (
+						<div
+							className='absolute top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-10'
+							style={{ maxHeight: "300px", overflowY: "auto" }}
+						>
+							{CATEGORIES.map((category) => (
+								<button
+									key={category.slug}
+									onClick={() =>
+										handleCategorySelect(
+											category.name,
+											category.slug,
+										)
+									}
+									className={`w-full px-4 py-3 text-left hover:bg-blue-50 transition flex items-center justify-between border-b border-gray-100 last:border-b-0 ${
+										selectedCategory === category.name
+											? "bg-blue-50"
+											: ""
+									}`}
+								>
+									<span
+										className={
+											selectedCategory === category.name
+												? "text-blue-600 font-semibold"
+												: "text-gray-700"
+										}
+									>
+										{category.name}
+									</span>
+									{selectedCategory === category.name && (
+										<span className='text-blue-600 font-bold'>
+											✓
+										</span>
+									)}
+								</button>
+							))}
+						</div>
+					)}
+				</div>
 			</div>
 
 			{/* Info Text */}
@@ -264,6 +401,15 @@ export function JobsSearchBar({ onLocationChange }: JobsSearchBarProps) {
 				<span className='font-semibold text-gray-700'>
 					{selectedLocation}
 				</span>
+				{selectedCategory !== "All Categories" && (
+					<>
+						{" "}
+						· Category:{" "}
+						<span className='font-semibold text-gray-700'>
+							{selectedCategory}
+						</span>
+					</>
+				)}
 			</p>
 		</div>
 	);

@@ -8,6 +8,7 @@ import { Suspense } from "react";
 import "@/styles/home.css";
 import { HomeWidgetsFilter } from "@/components/wilco/HomeWidgetsFilter";
 import { LocationDropdown } from "@/components/wilco/LocationDropdown";
+import { getLocationsWithCache } from "@/lib/location-cache";
 
 /* ═══════════════════════════════════════
    HOME PAGE — WilCo Guide
@@ -130,13 +131,14 @@ function formatSalary(job: any): string {
 
 function getLocationName(item: any): string {
 	if (!item.location) return "";
-	if (typeof item.location === "object")
-		return (
-			item.location.name ||
-			item.location.title ||
-			item.location.city ||
-			""
-		);
+	if (typeof item.location === "object") {
+		// Handle city if it's an object with nested properties
+		let city = item.location.city;
+		if (typeof city === "object") {
+			city = city.name || city.title || "";
+		}
+		return item.location.name || item.location.title || city || "";
+	}
 	return String(item.location);
 }
 
@@ -149,24 +151,30 @@ function getCompanyName(job: any): string {
 
 function getVenueName(event: any): string {
 	if (!event.venue) return "";
-	if (typeof event.venue === "object")
-		return (
-			event.venue.name || event.venue.title || event.venue.address || ""
-		);
+	if (typeof event.venue === "object") {
+		// Handle nested properties if they're objects
+		const name =
+			event.venue.name || event.venue.title || event.venue.address || "";
+		return typeof name === "string" ? name : "";
+	}
 	return String(event.venue);
 }
 
 function getPriceText(event: any): string {
 	if (!event.price) return "";
-	if (typeof event.price === "object")
-		return event.price.amount || event.price.value || String(event.price);
+	if (typeof event.price === "object") {
+		const amount = event.price.amount || event.price.value;
+		return typeof amount === "string" ? amount : String(amount || "");
+	}
 	return String(event.price);
 }
 
 function getTimeText(event: any): string {
 	if (!event.time) return "";
-	if (typeof event.time === "object")
-		return event.time.start || event.time.value || String(event.time);
+	if (typeof event.time === "object") {
+		const start = event.time.start || event.time.value;
+		return typeof start === "string" ? start : String(start || "");
+	}
 	return String(event.time);
 }
 
@@ -245,60 +253,42 @@ async function HomePageContent({
 	let sponsors: any[] = [];
 	let locations: any[] = [];
 
-	// ═══ FETCH LOCATIONS ═══
-	try {
-		const r = await payload.find({
-			collection: "locations",
-			sort: "name",
-			limit: 50,
-		});
-		locations = r.docs || [];
+	// ═══ FETCH LOCATIONS (CACHED) ═══
+	locations = await getLocationsWithCache();
+
+	// If a city is selected, find its ID
+	if (selectedCity) {
 		console.log(
-			`📍 [Home Filter] Loaded ${locations.length} cities from CMS:`,
-			locations.map((l: any) => l.name).join(", "),
+			`🔍 [Home Filter] Looking for city with slug: "${selectedCity}"`,
 		);
-
-		// If a city is selected, find its ID
-		if (selectedCity) {
+		const cityDoc = locations.find((loc: any) => loc.slug === selectedCity);
+		if (cityDoc) {
+			selectedCityId = cityDoc.id;
 			console.log(
-				`🔍 [Home Filter] Looking for city with slug: "${selectedCity}"`,
+				`✅ [Home Filter] Found location match! "${cityDoc.name}" (ID: ${selectedCityId})`,
 			);
-			const cityDoc = locations.find(
-				(loc: any) => loc.slug === selectedCity,
-			);
-			if (cityDoc) {
-				selectedCityId = cityDoc.id;
-				console.log(
-					`✅ [Home Filter] Found location match! "${cityDoc.name}" (ID: ${selectedCityId})`,
-				);
 
-				// Now set up the filter queries using the ID
-				articleWhere.city = {
-					equals: selectedCityId,
-				};
-				jobWhere["location.city"] = {
-					equals: selectedCityId,
-				};
-				businessWhere.or = [
-					{
-						"address.city": {
-							equals: selectedCityId,
-						},
+			// Now set up the filter queries using the ID
+			articleWhere.city = {
+				equals: selectedCityId,
+			};
+			jobWhere["location.city"] = {
+				equals: selectedCityId,
+			};
+			businessWhere.or = [
+				{
+					"address.city": {
+						equals: selectedCityId,
 					},
-				];
+				},
+			];
 
-				console.log(
-					"📍 City filter configured for ID:",
-					selectedCityId,
-				);
-			} else {
-				console.warn(
-					`⚠️ [Home Filter] City slug "${selectedCity}" not found in CMS locations`,
-				);
-			}
+			console.log("📍 City filter configured for ID:", selectedCityId);
+		} else {
+			console.warn(
+				`⚠️ [Home Filter] City slug "${selectedCity}" not found in CMS locations`,
+			);
 		}
-	} catch (e) {
-		console.error("❌ Error fetching locations:", e);
 	}
 
 	// ═══ FETCH ALL ARTICLES (without city filter for hero) ═══

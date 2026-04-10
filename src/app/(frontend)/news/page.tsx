@@ -280,6 +280,7 @@ async function NewsPageContent({
 		.map((c) => ({ name: c.name, slug: c.slug, color: c.color }));
 
 	const locations = locationsResult.docs.map((l) => ({
+		id: l.id,
 		name: l.name,
 		slug: l.slug,
 	}));
