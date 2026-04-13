@@ -29,6 +29,21 @@ import { Deals } from "./collections/Deals";
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
 
+/**
+ * Get upload path based on environment
+ * On staging server: use persistent shared folder
+ * On local: use project media folder
+ */
+const getUploadPath = () => {
+	// On internal staging server - use persistent shared folder
+	if (process.env.ENVIRONMENT === "staging") {
+		return "/var/www/wilco-cms/shared/media";
+	}
+
+	// Fallback for local development
+	return path.join(process.cwd(), "media");
+};
+
 export default buildConfig({
 	admin: {
 		user: Users.slug,
