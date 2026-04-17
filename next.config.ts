@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
 	},
 	experimental: {
 		reactCompiler: false,
+		middlewareClientMaxBodySize: '100mb',
 		// Configure Server Actions to allow requests from staging server
 		serverActions: {
 			allowedOrigins: [

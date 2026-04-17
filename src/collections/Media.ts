@@ -2,20 +2,6 @@ import type { CollectionConfig } from "payload";
 import path from "path";
 import { tenantAccess, franchiseFieldAccess } from "@/access/tenantAccess";
 
-/**
- * Get upload path based on environment
- * Mirrors the getUploadPath from payload.config.ts
- */
-const getUploadPath = () => {
-	// On internal staging server - use persistent shared folder
-	if (process.env.ENVIRONMENT === "staging") {
-		return "/var/www/wilco-cms/shared/media";
-	}
-
-	// Fallback for local development
-	return path.join(process.cwd(), "media");
-};
-
 export const Media: CollectionConfig = {
 	slug: "media",
 	labels: {
@@ -34,14 +20,13 @@ export const Media: CollectionConfig = {
 		group: "Content",
 	},
 	access: {
-		read: () => true, // Public read for images
+		read: () => true,
 		create: tenantAccess.create,
 		update: tenantAccess.update,
 		delete: tenantAccess.delete,
 	},
 	upload: {
-		// Use persistent folder on staging, local folder on development
-		staticDir: getUploadPath(),
+		staticDir: path.join(process.cwd(), "media"),
 		mimeTypes: ["image/*", "application/pdf"],
 		imageSizes: [
 			{
@@ -90,5 +75,4 @@ export const Media: CollectionConfig = {
 		},
 	],
 };
-
 export default Media;

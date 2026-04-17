@@ -1,0 +1,58 @@
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+/**
+ * Tenant Enforcement — Layer 1 (Domain Derivation)
+ *
+ * Derives the franchise context from the request hostname.
+ * NEVER trusts client cookies, headers, or URL parameters for franchise identity.
+ * Sets x-franchise-id as a server-side request header for downstream use.
+ */
+
+
+const DOMAIN_MAP: Record<string, string> = {
+  'wilcoguide.com': 'wilco',
+  'www.wilcoguide.com': 'wilco',
+  // Future franchises:
+  // 'hendersonguide.com': 'henderson',
+  // 'www.hendersonguide.com': 'henderson',
+}
+
+export function middleware(request: NextRequest) {
+  const hostname = request.headers.get('host') || ''
+
+  // Strip port for matching (handles localhost:3000)
+  const hostnameWithoutPort = hostname.split(':')[0]
+
+  // Look up franchise — default to 'wilco' for development
+  const franchise =
+    DOMAIN_MAP[hostname] ||
+    DOMAIN_MAP[hostnameWithoutPort] ||
+    'wilco'
+
+  // Clone request headers and inject franchise context
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-franchise-id', franchise)
+
+  // Continue with modified headers
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  })
+
+  return response
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (images, etc.)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+  ],
+}
