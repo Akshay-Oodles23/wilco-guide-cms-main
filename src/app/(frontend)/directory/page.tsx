@@ -205,18 +205,22 @@ export default async function DirectoryPage(props: {
 				})
 				.slice(0, 4),
 
-			// Home Services: Only businesses with category "Home Services"
-			homeServices: businesses
+			// Cafes & Bars: Businesses with category like Cafe, Coffee, Coffee Shop, Bar, etc.
+			cafesAndBars: businesses
 				.filter((b) => {
 					const bizCategory =
 						typeof b.category === "object"
 							? (b.category?.name || "").toLowerCase()
 							: (b.category || "").toLowerCase();
-					return bizCategory === "home services";
+					return (
+						bizCategory.includes("cafe") ||
+						bizCategory.includes("coffee") ||
+						bizCategory.includes("bar")
+					);
 				})
 				.slice(0, 4),
 
-			// More Services: Everything else (non-featured, non-restaurant, non-home services)
+			// More Services: Everything else (non-featured, non-restaurant, non-cafe/coffee/bar)
 			moreServices: businesses
 				.filter((b) => {
 					const bizCategory =
@@ -226,7 +230,9 @@ export default async function DirectoryPage(props: {
 					return (
 						b.featured !== true &&
 						bizCategory !== "restaurants" &&
-						bizCategory !== "home services"
+						!bizCategory.includes("cafe") &&
+						!bizCategory.includes("coffee") &&
+						!bizCategory.includes("bar")
 					);
 				})
 				.slice(0, 8),
@@ -270,9 +276,9 @@ export default async function DirectoryPage(props: {
 				count: categorized.restaurants.length,
 			},
 			secondarySection: {
-				title: "Home Services",
-				businesses: categorized.homeServices,
-				count: categorized.homeServices.length,
+				title: "Cafes, Coffee & Bars",
+				businesses: categorized.cafesAndBars,
+				count: categorized.cafesAndBars.length,
 			},
 			otherSection: {
 				title: "More Services & Businesses",
@@ -506,58 +512,62 @@ export default async function DirectoryPage(props: {
 		}));
 	};
 
-	const generateServiceCards = () => {
-		// Filter for Home Services category
-		const serviceBusinesses = filteredBusinesses.filter((b: any) => {
+	const generateCafeAndBarCards = () => {
+		// Filter for Cafe, Coffee, and Bar categories
+		const cafeBusinesses = filteredBusinesses.filter((b: any) => {
 			const bizCategory =
 				typeof b.category === "object" ? b.category?.name : b.category;
-			return bizCategory?.toLowerCase() === "home services";
+			const lowerCategory = bizCategory?.toLowerCase() || "";
+			return (
+				lowerCategory.includes("cafe") ||
+				lowerCategory.includes("coffee") ||
+				lowerCategory.includes("bar")
+			);
 		});
 
-		if (serviceBusinesses.length === 0) {
+		if (cafeBusinesses.length === 0) {
 			return [
 				{
-					name: "Bright Spark Electric",
-					category: "Electrician",
-					price: "$$",
+					name: "Brew Haven",
+					category: "Coffee Shop",
+					price: "$",
 					location: "Leander",
 					rating: 4.7,
-					image: "https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=600&q=80",
-					tags: [{ label: "Hiring", type: "hiring" }],
+					image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80",
+					tags: [{ label: "New", type: "new" }],
 				},
 				{
-					name: "True Colors Painting",
-					category: "Painting",
+					name: "The Daily Cafe",
+					category: "Cafe & Bakery",
 					price: "$$",
 					location: "Round Rock",
 					rating: 4.6,
-					image: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&q=80",
-					tags: [{ label: "10% Off", type: "deal" }],
+					image: "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=600&q=80",
+					tags: [{ label: "Deal", type: "deal" }],
 				},
 				{
-					name: "Texas Top Roofing",
-					category: "Roofing",
-					price: "$$$",
+					name: "The Hive Bar",
+					category: "Bar & Lounge",
+					price: "$$",
 					location: "Georgetown",
 					rating: 4.8,
-					image: "https://images.unsplash.com/photo-1628624747186-a941c476b7ef?w=600&q=80",
+					image: "https://images.unsplash.com/photo-1514432324607-2e467f4af3fb?w=600&q=80",
 					tags: [],
 				},
 				{
-					name: "Sparkle Home Clean",
-					category: "Cleaning",
+					name: "Artisan Coffee Co",
+					category: "Specialty Coffee",
 					price: "$",
 					location: "Cedar Park",
 					rating: 4.9,
-					image: "https://images.unsplash.com/photo-1527515637462-cee1395c2deb?w=600&q=80",
+					image: "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=600&q=80",
 					tags: [
-						{ label: "New", type: "new" },
-						{ label: "Deal", type: "deal" },
+						{ label: "Popular", type: "featured" },
 					],
 				},
 			];
 		}
-		return serviceBusinesses.slice(0, 4).map((b: any) => ({
+		return cafeBusinesses.slice(0, 4).map((b: any) => ({
 			name: b.name || "Business",
 			category:
 				typeof b.category === "object" ? b.category?.name : b.category,
@@ -570,17 +580,17 @@ export default async function DirectoryPage(props: {
 			image:
 				getImageUrl(b.photos?.[0]?.photo) ||
 				getImageUrl(b.featuredImage) ||
-				"https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=600&q=80",
+				"https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80",
 			tags: [] as any[],
 		}));
 	};
 
 	const restaurantCards = generateRestaurantCards();
-	const serviceCards = generateServiceCards();
+	const cafeAndBarCards = generateCafeAndBarCards();
 
 	/* Calculate dynamic business counts for each section */
 	const restaurantCount = restaurantCards.length;
-	const serviceCount = serviceCards.length;
+	const cafeAndBarCount = cafeAndBarCards.length;
 
 	/* Build URL for filtered "See all" links - preserve current filters */
 	const buildCategoryLink = (category: string) => {
@@ -592,7 +602,19 @@ export default async function DirectoryPage(props: {
 		if (searchQuery) {
 			params.set("search", searchQuery);
 		}
-		return `/directory?${params.toString()}`;
+		return `/directory/all?${params.toString()}`;
+	};
+
+	const buildAllBusinessesLink = () => {
+		const params = new URLSearchParams();
+		if (selectedLocation && selectedLocation !== "All Locations") {
+			params.set("location", selectedLocation);
+		}
+		if (searchQuery) {
+			params.set("search", searchQuery);
+		}
+		const query = params.toString();
+		return query ? `/directory/all?${query}` : "/directory/all";
 	};
 
 	const trendingChips = [
@@ -937,7 +959,7 @@ export default async function DirectoryPage(props: {
 							</div>
 							{sections.otherSection.count > 4 && (
 								<Link
-									href='/directory/all'
+									href={buildAllBusinessesLink()}
 									className='section-see-all'
 								>
 									See all →

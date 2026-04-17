@@ -194,10 +194,10 @@ export function useDetectLocation() {
 				console.warn(
 					`⚠️ [IP Detection] City "${detectedCityName}" NOT in CMS cities`,
 				);
-				console.log(`🏠 [IP Detection] → Falling back to: Georgetown`);
-				setDetectedCity("Georgetown");
-				setDetectedSlug("georgetown");
-				setCookie(COOKIE_NAME, "georgetown", COOKIE_MAX_AGE);
+				console.log(`🏠 [IP Detection] → Falling back to: Ceder Park`);
+				setDetectedCity("Ceder Park");
+				setDetectedSlug("ceder-park");
+				setCookie(COOKIE_NAME, "ceder-park", COOKIE_MAX_AGE);
 			}
 		}
 

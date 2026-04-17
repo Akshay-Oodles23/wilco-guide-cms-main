@@ -598,3 +598,127 @@
     padding: 24px 20px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   DIRECTORY /ALL PAGE
+   ═══════════════════════════════════════════════════════ */
+.directory-all-page {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 0 20px 48px;
+}
+
+.page-header {
+  padding: 14px 0 10px;
+}
+
+.breadcrumb-link {
+  display: inline-block;
+  font-size: 15px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  margin-bottom: 4px;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.results-count {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.all-businesses-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.biz-card.all-card {
+  height: 240px;
+}
+
+@media (max-width: 1024px) {
+  .all-businesses-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .all-businesses-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pagination {
+  margin: 22px 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.pagination-button {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--bg-white);
+}
+
+.pagination-button:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.no-results {
+  margin: 28px 0 10px;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  background: var(--bg-white);
+}
+
+.no-results h2 {
+  margin: 0;
+}
+
+.no-results p {
+  margin: 8px 0 16px;
+  color: var(--text-secondary);
+}
+
+.back-button {
+  display: inline-block;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.back-button:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}

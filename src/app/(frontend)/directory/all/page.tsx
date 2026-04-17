@@ -6,7 +6,14 @@ import Link from "next/link";
 import { getPayload } from "payload";
 import config from "@/payload.config";
 import DirectoryFilters from "@/components/wilco/DirectoryFilters";
+import StarRating from "@/components/StarRating";
 import "@/styles/directory.css";
+
+export const metadata: Metadata = {
+	title: "All Businesses — WilCo Guide",
+	description:
+		"Browse all businesses in the WilCo Guide directory with category, location, and search filters.",
+};
 
 function getLocationName(item: any): string {
 	if (!item.location) return "WilCo";
@@ -44,8 +51,23 @@ function getImageUrl(media: any): string | null {
 	if (!media) return null;
 	if (typeof media === "string") return media;
 	if (media.url) return media.url;
-	if (media.filename) return media.filename;
+	if (media.filename) return `/media/${media.filename}`;
 	return null;
+}
+
+function toBusinessSlug(name: string): string {
+	return (name || "business")
+		.toLowerCase()
+		.replace(/[\u2019']/g, "")
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+}
+
+function getBusinessHref(business: any): string {
+	const slug =
+		business?.slug ||
+		toBusinessSlug(business?.name || business?.title || "business");
+	return `/directory/${slug}`;
 }
 
 export default async function DirectoryAllPage(props: {
@@ -68,13 +90,15 @@ export default async function DirectoryAllPage(props: {
 	let businesses: any[] = [];
 	let categories: any[] = [];
 	let locations: any[] = [];
+	let selectedLocationId: string | null = null;
 
 	try {
-		businesses = await payload.find({
+		const response = await payload.find({
 			collection: "businesses",
 			limit: 1000,
+			depth: 2,
 		});
-		businesses = businesses.docs || businesses;
+		businesses = response.docs || [];
 	} catch (e) {
 		console.error("Failed to fetch businesses:", e);
 	}
@@ -90,13 +114,22 @@ export default async function DirectoryAllPage(props: {
 	}
 
 	try {
-		locations = await payload.find({
+		const response = await payload.find({
 			collection: "locations",
 			limit: 100,
 		});
-		locations = locations.docs || locations;
+		locations = response.docs || [];
 	} catch (e) {
 		console.error("Failed to fetch locations:", e);
+	}
+
+	if (selectedLocation && selectedLocation !== "All WilCo") {
+		const locationDoc = locations.find(
+			(loc: any) => loc.slug === selectedLocation,
+		);
+		if (locationDoc) {
+			selectedLocationId = locationDoc.id;
+		}
 	}
 
 	/* ═══ FILTER BUSINESSES ═══ */
@@ -118,8 +151,24 @@ export default async function DirectoryAllPage(props: {
 	// Filter by location
 	if (selectedLocation && selectedLocation !== "All WilCo") {
 		filteredBusinesses = filteredBusinesses.filter((b: any) => {
-			const loc = getBusinessLocation(b);
-			return loc.toLowerCase() === selectedLocation.toLowerCase();
+			if (selectedLocationId) {
+				const businessLocationId =
+					typeof b.address?.city === "object"
+						? b.address.city?.id
+						: null;
+				return businessLocationId === selectedLocationId;
+			}
+
+			const locationName = getBusinessLocation(b).toLowerCase();
+			const locationSlug = locationName
+				.replace(/[\u2019']/g, "")
+				.replace(/[^a-z0-9]+/g, "-")
+				.replace(/^-+|-+$/g, "");
+
+			return (
+				locationName === selectedLocation.toLowerCase() ||
+				locationSlug === selectedLocation.toLowerCase()
+			);
 		});
 	}
 
@@ -164,21 +213,59 @@ export default async function DirectoryAllPage(props: {
 					"Health & Wellness",
 				];
 
-	const locationNames =
+	const locationOptions =
 		locations.length > 0
-			? ["All WilCo", ...locations.map((l: any) => l.name || l.title)]
+			? locations.map((l: any) => ({
+					id: String(l.id),
+					name: l.name || l.title,
+					slug: l.slug,
+			  }))
 			: [
-					"All WilCo",
-					"Leander",
-					"Cedar Park",
-					"Round Rock",
-					"Georgetown",
-					"Liberty Hill",
-					"Hutto",
-					"Jarrell",
-					"Florence",
-					"Taylor",
+					{ id: "leander", name: "Leander", slug: "leander" },
+					{
+						id: "cedar-park",
+						name: "Cedar Park",
+						slug: "cedar-park",
+					},
+					{
+						id: "round-rock",
+						name: "Round Rock",
+						slug: "round-rock",
+					},
+					{
+						id: "georgetown",
+						name: "Georgetown",
+						slug: "georgetown",
+					},
+					{
+						id: "liberty-hill",
+						name: "Liberty Hill",
+						slug: "liberty-hill",
+					},
+					{ id: "hutto", name: "Hutto", slug: "hutto" },
+					{ id: "jarrell", name: "Jarrell", slug: "jarrell" },
+					{ id: "florence", name: "Florence", slug: "florence" },
+					{ id: "taylor", name: "Taylor", slug: "taylor" },
 				];
+
+	const selectedLocationLabel =
+		locationOptions.find((l) => l.slug === selectedLocation)?.name ||
+		selectedLocation;
+
+	const buildPageHref = (page: number) => {
+		const params = new URLSearchParams();
+		if (selectedCategory && selectedCategory !== "All") {
+			params.set("category", selectedCategory);
+		}
+		if (selectedLocation && selectedLocation !== "All WilCo") {
+			params.set("location", selectedLocation);
+		}
+		if (searchQuery) {
+			params.set("search", searchQuery);
+		}
+		params.set("page", String(page));
+		return `/directory/all?${params.toString()}`;
+	};
 
 	return (
 		<div className='directory-all-page'>
@@ -197,7 +284,7 @@ export default async function DirectoryAllPage(props: {
 						? ` in ${selectedCategory}`
 						: ""}
 					{selectedLocation && selectedLocation !== "All WilCo"
-						? ` in ${selectedLocation}`
+						? ` in ${selectedLocationLabel}`
 						: ""}
 				</p>
 			</div>
@@ -205,10 +292,7 @@ export default async function DirectoryAllPage(props: {
 			{/* ═══ FILTERS ═══ */}
 			<DirectoryFilters
 				categories={categoryNames}
-				locations={locationNames}
-				selectedCategory={selectedCategory}
-				selectedLocation={selectedLocation}
-				selectedSearch={searchQuery}
+				locations={locationOptions}
 			/>
 
 			{/* ═══ RESULTS GRID ═══ */}
@@ -218,9 +302,7 @@ export default async function DirectoryAllPage(props: {
 						{pageBusinesses.map((b: any, i: number) => (
 							<Link
 								key={i}
-								href={`/directory/${b.name
-									.toLowerCase()
-									.replace(/[^a-z0-9]+/g, "-")}`}
+								href={getBusinessHref(b)}
 								className='biz-card all-card'
 								style={{ textDecoration: "none" }}
 							>
@@ -247,13 +329,10 @@ export default async function DirectoryAllPage(props: {
 										📍 {getBusinessLocation(b)}
 									</div>
 									<div className='card-rating'>
-										<span className='stars'>
-											{"★".repeat(
-												Math.round(
-													b.googleRating || 4.5,
-												),
-											)}
-										</span>
+										<StarRating
+											rating={b.googleRating}
+											size='sm'
+										/>
 										<span className='rating-count'>
 											{b.googleRating || 4.5}
 										</span>
@@ -268,7 +347,7 @@ export default async function DirectoryAllPage(props: {
 						<div className='pagination'>
 							{validPage > 1 && (
 								<Link
-									href={`/directory/all?category=${selectedCategory}&location=${selectedLocation}&search=${searchQuery}&page=${validPage - 1}`}
+									href={buildPageHref(validPage - 1)}
 									className='pagination-button prev'
 								>
 									← Previous
@@ -281,7 +360,7 @@ export default async function DirectoryAllPage(props: {
 
 							{validPage < totalPages && (
 								<Link
-									href={`/directory/all?category=${selectedCategory}&location=${selectedLocation}&search=${searchQuery}&page=${validPage + 1}`}
+									href={buildPageHref(validPage + 1)}
 									className='pagination-button next'
 								>
 									Next →
