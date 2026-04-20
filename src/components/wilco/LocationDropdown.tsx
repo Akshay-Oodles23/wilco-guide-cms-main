@@ -43,15 +43,19 @@ export function LocationDropdown({ locations }: LocationDropdownProps) {
 				return;
 			}
 
-			// 2. Check context/cookie
-			if (selectedLocation) {
+			// 2. Check context/cookie (including explicit "All Locations" = "")
+			if (selectedLocation !== null) {
 				console.log(
 					`📍 [LocationDropdown] Using location from context/cookie: ${selectedLocation}`,
 				);
-				// Update URL to reflect current selection
-				const params = new URLSearchParams();
-				params.set("location", selectedLocation);
-				router.push(`${pathname}?${params.toString()}`);
+				// Update URL to reflect current selection (or clear it for "All Locations")
+				if (selectedLocation) {
+					const params = new URLSearchParams();
+					params.set("location", selectedLocation);
+					router.push(`${pathname}?${params.toString()}`);
+				} else {
+					router.push(pathname);
+				}
 				setHasInitialized(true);
 				return;
 			}

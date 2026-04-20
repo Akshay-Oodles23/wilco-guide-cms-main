@@ -62,7 +62,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 		if (
 			detectionLoading ||
 			!detectedSlug ||
-			selectedLocation // Already has a location
+			selectedLocation !== null // Already initialized (including explicit "All Locations")
 		) {
 			return;
 		}
@@ -75,7 +75,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 	}, [detectedSlug, detectionLoading, selectedLocation]);
 
 	const value: LocationContextType = {
-		selectedLocation: selectedLocation || "georgetown", // Always fallback to default
+		selectedLocation,
 		setSelectedLocation,
 		isLoading: detectionLoading,
 		source,

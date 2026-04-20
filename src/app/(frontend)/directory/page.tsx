@@ -2,6 +2,7 @@
 // TODO: Remove ts-nocheck after running 'payload generate:types' with live database
 import { getPayload } from "payload";
 import config from "@payload-config";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import type { Metadata } from "next";
 import "@/styles/directory.css";
@@ -83,6 +84,9 @@ export default async function DirectoryPage(props: {
 	const selectedCategory = searchParams.category || "";
 	const selectedLocation = searchParams.location || "";
 	const searchQuery = searchParams.search || "";
+	const cookieStore = await cookies();
+	const globalLocationSlug =
+		selectedLocation || cookieStore.get("wilco_detected_location")?.value || "";
 
 	const payload = await getPayload({ config });
 
@@ -332,9 +336,125 @@ export default async function DirectoryPage(props: {
 					"Taylor",
 				];
 
-	/* Build spotlight data from ALL UNFILTERED businesses (no filters applied) */
-	const premiumSpotlight = businesses
-		.filter((b) => b.featured === true)
+	const shuffleBusinesses = (items: any[]) => {
+		const copy = [...items];
+		for (let i = copy.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[copy[i], copy[j]] = [copy[j], copy[i]];
+		}
+		return copy;
+	};
+
+	const getBusinessLocationKey = (business: any) => {
+		const city = business.address?.city;
+		if (typeof city === "object" && city) {
+			if (city.slug) return normalizeLocationValue(String(city.slug));
+			if (city.name) return normalizeLocationValue(String(city.name));
+			if (city.id) return String(city.id);
+		}
+		if (typeof city === "string" && city.trim()) {
+			return normalizeLocationValue(city);
+		}
+		const fallbackLocation = getBusinessLocation(business);
+		return fallbackLocation
+			? normalizeLocationValue(fallbackLocation)
+			: "unknown-location";
+	};
+
+	const pickRandomDiverseBusinesses = (pool: any[], targetCount: number) => {
+		const shuffled = shuffleBusinesses(pool);
+		const result: any[] = [];
+		const usedLocations = new Set<string>();
+
+		// First pass: prioritize one business per location
+		for (const business of shuffled) {
+			if (result.length >= targetCount) break;
+			const locationKey = getBusinessLocationKey(business);
+			if (usedLocations.has(locationKey)) continue;
+			result.push(business);
+			usedLocations.add(locationKey);
+		}
+
+		// Second pass: fill remaining slots regardless of location
+		if (result.length < targetCount) {
+			for (const business of shuffled) {
+				if (result.length >= targetCount) break;
+				if (result.includes(business)) continue;
+				result.push(business);
+			}
+		}
+
+		return result;
+	};
+
+	const normalizeLocationValue = (value: string) =>
+		value.trim().toLowerCase().replace(/\s+/g, "-");
+
+	const selectedLocationDoc = globalLocationSlug
+		? locations.find((loc: any) => loc.slug === globalLocationSlug)
+		: null;
+
+	const isBusinessInLocation = (business: any) => {
+		if (!selectedLocationDoc) return false;
+
+		const targetId = String(selectedLocationDoc.id || "");
+		const targetSlug = String(selectedLocationDoc.slug || "");
+		const targetName = String(selectedLocationDoc.name || "");
+
+		const city = business.address?.city;
+		if (typeof city === "object" && city) {
+			const cityId = city.id ? String(city.id) : "";
+			const citySlug = city.slug ? String(city.slug) : "";
+			const cityName = city.name ? String(city.name) : "";
+
+			return (
+				(cityId && cityId === targetId) ||
+				(citySlug && citySlug === targetSlug) ||
+				(cityName &&
+					normalizeLocationValue(cityName) ===
+						normalizeLocationValue(targetName))
+			);
+		}
+
+		if (typeof city === "string" && city.trim()) {
+			return (
+				normalizeLocationValue(city) === normalizeLocationValue(targetName) ||
+				normalizeLocationValue(city) === normalizeLocationValue(targetSlug)
+			);
+		}
+
+		const fallbackLocation = getBusinessLocation(business);
+		return fallbackLocation
+			? normalizeLocationValue(fallbackLocation) ===
+					normalizeLocationValue(targetName) ||
+					normalizeLocationValue(fallbackLocation) ===
+						normalizeLocationValue(targetSlug)
+			: false;
+	};
+
+	const locationBusinesses = selectedLocationDoc
+		? businesses.filter((b) => isBusinessInLocation(b))
+		: [];
+	const featuredLocationBusinesses = locationBusinesses.filter(
+		(b) => b.featured === true,
+	);
+	const randomDiverseBusinesses = pickRandomDiverseBusinesses(businesses, 11);
+
+	// Spotlight source priority:
+	// 1) businesses in globally selected location (featured first)
+	// 2) random businesses with diverse locations (minimum 5, up to 11)
+	const spotlightSourceBusinesses =
+		locationBusinesses.length > 0
+			? [
+					...shuffleBusinesses(featuredLocationBusinesses),
+					...shuffleBusinesses(
+						locationBusinesses.filter((b) => b.featured !== true),
+					),
+				]
+			: randomDiverseBusinesses;
+
+	/* Build spotlight data from spotlight source */
+	const premiumSpotlight = spotlightSourceBusinesses
 		.slice(0, 3)
 		.map((b: any) => ({
 			name: b.name || b.title || "Business",
@@ -355,9 +475,9 @@ export default async function DirectoryPage(props: {
 				"https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80",
 		}));
 
-	/* Build right cards (2x2) from ALL UNFILTERED businesses (no filters applied) */
+	/* Build right cards (2x2) from the same spotlight source */
 	const generateRightCards = () => {
-		const rightBusinesses = businesses.slice(3, 11);
+		const rightBusinesses = spotlightSourceBusinesses.slice(3, 11);
 
 		if (rightBusinesses.length === 0) {
 			return [];

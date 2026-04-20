@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useLocationContext } from "@/contexts/LocationContext";
 
 export interface Location {
 	name: string;
@@ -19,6 +20,23 @@ interface JobsSearchBarProps {
 	onLocationChange?: (location: string) => void;
 }
 
+function setLocationCookie(value: string): void {
+	if (typeof document === "undefined") return;
+	if (!value) {
+		document.cookie = "wilco_detected_location=; path=/; max-age=0";
+		return;
+	}
+	document.cookie = `wilco_detected_location=${encodeURIComponent(value)}; path=/; max-age=${30 * 24 * 60 * 60}`;
+}
+
+function getLocationCookie(): string {
+	if (typeof document === "undefined") return "";
+	const match = document.cookie.match(
+		/(?:^|;\s*)wilco_detected_location=([^;]+)/,
+	);
+	return match ? decodeURIComponent(match[1]) : "";
+}
+
 export function JobsSearchBar({
 	locations,
 	categories,
@@ -34,6 +52,8 @@ export function JobsSearchBar({
 	];
 	const searchParams = useSearchParams();
 	const router = useRouter();
+	const { setSelectedLocation: setGlobalSelectedLocation } =
+		useLocationContext();
 	const [selectedLocation, setSelectedLocation] = useState(
 		"All Williamson County",
 	);
@@ -42,6 +62,24 @@ export function JobsSearchBar({
 	const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+	useEffect(() => {
+		// If user arrives at /jobs without a location param, reuse the globally selected location.
+		const locationParam = searchParams.get("location");
+		if (locationParam) return;
+
+		const normalizedGlobalLocation = getLocationCookie().trim();
+		if (!normalizedGlobalLocation) return;
+
+		const locationExists = LOCATIONS.some(
+			(loc) => loc.slug === normalizedGlobalLocation,
+		);
+		if (!locationExists) return;
+
+		const params = new URLSearchParams(searchParams.toString());
+		params.set("location", normalizedGlobalLocation);
+		router.replace(`/jobs?${params.toString()}`);
+	}, [searchParams, router, locations]);
 
 	useEffect(() => {
 		const locationParam = searchParams.get("location");
@@ -76,6 +114,8 @@ export function JobsSearchBar({
 	const handleLocationSelect = (name: string, slug: string) => {
 		setSelectedLocation(name);
 		setIsLocationOpen(false);
+		setGlobalSelectedLocation(slug || "");
+		setLocationCookie(slug || "");
 
 		// Build URL with both location and search parameters
 		const params = new URLSearchParams();

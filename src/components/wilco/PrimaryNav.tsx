@@ -5,10 +5,18 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 import { NAV_LINKS } from '@/lib/site-config'
+import { useLocationContext } from '@/contexts/LocationContext'
 
 export function PrimaryNav() {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { selectedLocation } = useLocationContext()
+
+  const withSelectedLocation = (href: string) => {
+    if (href !== '/jobs') return href
+    if (!selectedLocation || !selectedLocation.trim()) return href
+    return `${href}?location=${encodeURIComponent(selectedLocation)}`
+  }
 
   return (
     <>
@@ -30,7 +38,7 @@ export function PrimaryNav() {
             return (
               <Link
                 key={link.href}
-                href={link.href}
+                href={withSelectedLocation(link.href)}
                 className={`px-4 h-full flex items-center text-sm font-medium no-underline relative transition-colors ${
                   isActive
                     ? 'text-blue font-semibold'
@@ -89,7 +97,7 @@ export function PrimaryNav() {
               return (
                 <Link
                   key={link.href}
-                  href={link.href}
+                  href={withSelectedLocation(link.href)}
                   onClick={() => setMobileOpen(false)}
                   className={`px-6 min-h-[48px] flex items-center text-base font-medium no-underline ${
                     isActive ? 'text-blue font-semibold bg-blue-light' : 'text-text-primary'
