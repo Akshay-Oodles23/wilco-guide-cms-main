@@ -58,6 +58,41 @@ function getImageUrl(media: any): string | null {
 	return null;
 }
 
+function normalizeCategoryValue(value: string): string {
+	return (value || "")
+		.toLowerCase()
+		.trim()
+		.replace(/&/g, "and")
+		.replace(/[^a-z0-9]+/g, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function matchesCategoryFilter(business: any, selectedCategory: string): boolean {
+	const bizCategoryRaw =
+		typeof business.category === "object"
+			? business.category?.name || ""
+			: business.category || "";
+	const bizCategory = normalizeCategoryValue(bizCategoryRaw);
+	const selected = normalizeCategoryValue(selectedCategory);
+
+	if (!selected || selected === "all") return true;
+	if (bizCategory === selected) return true;
+
+	// Grouped UI category support
+	if (selected.includes("cafe") || selected.includes("coffee")) {
+		return bizCategory.includes("cafe") || bizCategory.includes("coffee");
+	}
+	if (selected.includes("restaurant")) {
+		return bizCategory.includes("restaurant");
+	}
+	if (selected.includes("bar")) {
+		return bizCategory.includes("bar");
+	}
+
+	return bizCategory.includes(selected) || selected.includes(bizCategory);
+}
+
 function toBusinessSlug(name: string): string {
 	return (name || "business")
 		.toLowerCase()
@@ -122,39 +157,109 @@ export default async function DirectoryPage(props: {
 	try {
 		const r = await payload.find({
 			collection: "businesses",
-			limit: 100,
+			limit: 1000,
 			depth: 2,
 		});
 		businesses = r.docs || [];
 	} catch (e) {
 		console.error("Directory: failed to fetch businesses", e);
 	}
-	// Try to fetch categories, but don't fail if collection doesn't exist
-	try {
-		const r = await payload.find({ collection: "categories", limit: 30 });
-		categories = r.docs || [];
-	} catch (e) {
-		console.warn(
-			"Directory: categories collection not found, using fallback",
-			e,
-		);
-		// Use empty array - categories will use fallback names below
+	// Try to fetch categories only if collection exists
+	if ((payload as any).collections?.categories) {
+		try {
+			const r = await payload.find({ collection: "categories", limit: 30 });
+			categories = r.docs || [];
+		} catch (e) {
+			console.warn("Directory: failed to fetch categories, using fallback");
+			categories = [];
+		}
+	} else {
 		categories = [];
 	}
 
 	/* ═══ FILTER BUSINESSES ═══ */
 	let filteredBusinesses = businesses;
 
-	// Filter by location (using ID if found)
-	if (selectedLocationId) {
+	// Filter by location (support ID, slug, and name matching)
+	if (selectedLocation) {
 		console.log(
-			`📋 [Directory Filter] Filtering businesses by location ID: ${selectedLocationId}`,
+			`📋 [Directory Filter] Filtering businesses by location: ${selectedLocation}`,
 		);
+		const normalizedSelectedLocation = selectedLocation
+			.trim()
+			.toLowerCase()
+			.replace(/\s+/g, "-");
+		const selectedLocationDoc = locations.find(
+			(loc: any) => loc.slug === selectedLocation,
+		);
+		const targetId = selectedLocationDoc?.id
+			? String(selectedLocationDoc.id)
+			: selectedLocationId
+				? String(selectedLocationId)
+				: "";
+		const targetSlug = selectedLocationDoc?.slug
+			? String(selectedLocationDoc.slug)
+			: selectedLocation;
+		const targetName = selectedLocationDoc?.name
+			? String(selectedLocationDoc.name)
+			: selectedLocation;
+
+		const normalizeValue = (value: string) =>
+			value.trim().toLowerCase().replace(/\s+/g, "-");
+		const matchesLocationValue = (value: unknown) => {
+			if (value === null || value === undefined) return false;
+			const strValue = String(value).trim();
+			if (!strValue) return false;
+			const normalizedValue = normalizeValue(strValue);
+			return (
+				(targetId && strValue === targetId) ||
+				normalizedValue === normalizeValue(targetSlug) ||
+				normalizedValue === normalizeValue(targetName) ||
+				normalizedValue === normalizedSelectedLocation
+			);
+		};
+
 		filteredBusinesses = filteredBusinesses.filter((b: any) => {
-			// Check if business's address.city matches the location ID
-			const businessLocationId =
-				typeof b.address?.city === "object" ? b.address.city?.id : null;
-			return businessLocationId === selectedLocationId;
+			const city = b.address?.city;
+
+			if (typeof city === "object" && city) {
+				const cityId = city.id ? String(city.id) : "";
+				const citySlug = city.slug ? String(city.slug) : "";
+				const cityName = city.name ? String(city.name) : "";
+
+				return (
+					matchesLocationValue(cityId) ||
+					matchesLocationValue(citySlug) ||
+					matchesLocationValue(cityName)
+				);
+			}
+
+			if (
+				(typeof city === "string" && city.trim()) ||
+				typeof city === "number"
+			) {
+				if (matchesLocationValue(city)) return true;
+			}
+
+			const businessLocation = b.location;
+			if (typeof businessLocation === "object" && businessLocation) {
+				if (
+					matchesLocationValue(businessLocation.id) ||
+					matchesLocationValue(businessLocation.slug) ||
+					matchesLocationValue(businessLocation.name) ||
+					matchesLocationValue(businessLocation.title)
+				) {
+					return true;
+				}
+			} else if (
+				(typeof businessLocation === "string" && businessLocation.trim()) ||
+				typeof businessLocation === "number"
+			) {
+				if (matchesLocationValue(businessLocation)) return true;
+			}
+
+			const fallbackLocation = getBusinessLocation(b);
+			return matchesLocationValue(fallbackLocation);
 		});
 		console.log(
 			`📊 [Directory Filter] Found ${filteredBusinesses.length} businesses for this location`,
@@ -163,13 +268,9 @@ export default async function DirectoryPage(props: {
 
 	// Filter by category
 	if (selectedCategory && selectedCategory !== "All") {
-		filteredBusinesses = filteredBusinesses.filter((b: any) => {
-			const bizCategory =
-				typeof b.category === "object" ? b.category?.name : b.category;
-			return (
-				bizCategory?.toLowerCase() === selectedCategory.toLowerCase()
-			);
-		});
+		filteredBusinesses = filteredBusinesses.filter((b: any) =>
+			matchesCategoryFilter(b, selectedCategory),
+		);
 	}
 
 	// Filter by search query
@@ -249,14 +350,8 @@ export default async function DirectoryPage(props: {
 	const getDisplaySections = () => {
 		// If user selected a specific category filter
 		if (selectedCategory && selectedCategory !== "All") {
-			const filteredBySelectedCategory = filteredBusinesses.filter(
-				(b: any) => {
-					const bizCategory =
-						typeof b.category === "object"
-							? (b.category?.name || "").toLowerCase()
-							: (b.category || "").toLowerCase();
-					return bizCategory === selectedCategory.toLowerCase();
-				},
+			const filteredBySelectedCategory = filteredBusinesses.filter((b: any) =>
+				matchesCategoryFilter(b, selectedCategory),
 			);
 
 			return {
@@ -441,16 +536,18 @@ export default async function DirectoryPage(props: {
 	const randomDiverseBusinesses = pickRandomDiverseBusinesses(businesses, 11);
 
 	// Spotlight source priority:
-	// 1) businesses in globally selected location (featured first)
-	// 2) random businesses with diverse locations (minimum 5, up to 11)
+	// 1) if a location is selected, only use businesses from that location
+	// 2) if no location is selected, use random businesses with diverse locations
 	const spotlightSourceBusinesses =
-		locationBusinesses.length > 0
-			? [
-					...shuffleBusinesses(featuredLocationBusinesses),
-					...shuffleBusinesses(
-						locationBusinesses.filter((b) => b.featured !== true),
-					),
-				]
+		selectedLocationDoc
+			? locationBusinesses.length > 0
+				? [
+						...shuffleBusinesses(featuredLocationBusinesses),
+						...shuffleBusinesses(
+							locationBusinesses.filter((b) => b.featured !== true),
+						),
+					]
+				: []
 			: randomDiverseBusinesses;
 
 	/* Build spotlight data from spotlight source */
@@ -782,17 +879,17 @@ export default async function DirectoryPage(props: {
 				</div>
 
 				{/* ═══ PREMIUM SPOTLIGHT ═══ */}
-				<div className='spotlight-section'>
-					<div className='spotlight-header'>
-						<div className='spotlight-label'>
-							<div className='spotlight-icon'>★</div>
-							<div className='spotlight-title'>
-								Spotlight Businesses
+				{premiumSpotlight.length > 0 && (
+					<div className='spotlight-section'>
+						<div className='spotlight-header'>
+							<div className='spotlight-label'>
+								<div className='spotlight-icon'>★</div>
+								<div className='spotlight-title'>
+									Spotlight Businesses
+								</div>
 							</div>
 						</div>
-					</div>
 
-					{premiumSpotlight.length > 0 ? (
 						<div className='dir-hero-grid'>
 							{/* Premium Card (Left) */}
 							<DirectorySpotlight
@@ -815,18 +912,8 @@ export default async function DirectoryPage(props: {
 								</div>
 							)}
 						</div>
-					) : (
-						<div
-							style={{
-								padding: "20px",
-								textAlign: "center",
-								color: "#999",
-							}}
-						>
-							No featured businesses available.
-						</div>
-					)}
-				</div>
+					</div>
+				)}
 
 				{/* ═══ ACTIVE DEALS STRIP ═══ */}
 				<div className='deals-strip'>

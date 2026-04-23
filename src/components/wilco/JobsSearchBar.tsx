@@ -29,14 +29,6 @@ function setLocationCookie(value: string): void {
 	document.cookie = `wilco_detected_location=${encodeURIComponent(value)}; path=/; max-age=${30 * 24 * 60 * 60}`;
 }
 
-function getLocationCookie(): string {
-	if (typeof document === "undefined") return "";
-	const match = document.cookie.match(
-		/(?:^|;\s*)wilco_detected_location=([^;]+)/,
-	);
-	return match ? decodeURIComponent(match[1]) : "";
-}
-
 export function JobsSearchBar({
 	locations,
 	categories,
@@ -62,24 +54,6 @@ export function JobsSearchBar({
 	const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const debounceTimer = useRef<NodeJS.Timeout | null>(null);
-
-	useEffect(() => {
-		// If user arrives at /jobs without a location param, reuse the globally selected location.
-		const locationParam = searchParams.get("location");
-		if (locationParam) return;
-
-		const normalizedGlobalLocation = getLocationCookie().trim();
-		if (!normalizedGlobalLocation) return;
-
-		const locationExists = LOCATIONS.some(
-			(loc) => loc.slug === normalizedGlobalLocation,
-		);
-		if (!locationExists) return;
-
-		const params = new URLSearchParams(searchParams.toString());
-		params.set("location", normalizedGlobalLocation);
-		router.replace(`/jobs?${params.toString()}`);
-	}, [searchParams, router, locations]);
 
 	useEffect(() => {
 		const locationParam = searchParams.get("location");

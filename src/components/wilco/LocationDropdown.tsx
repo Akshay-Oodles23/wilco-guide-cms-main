@@ -108,18 +108,21 @@ export function LocationDropdown({ locations }: LocationDropdownProps) {
 	}, [locOpen]);
 
 	function selectLocation(slug: string) {
+		const params = new URLSearchParams(searchParams.toString());
+
 		if (slug) {
 			// A specific location was selected
 			setSelectedLocation(slug);
 			setCookie("wilco_detected_location", slug, 30);
-			const params = new URLSearchParams();
 			params.set("location", slug);
 			router.push(`${pathname}?${params.toString()}`);
 		} else {
 			// "All Locations" was selected - clear everything
 			setSelectedLocation("");
 			setCookie("wilco_detected_location", "", -1);
-			router.push(pathname);
+			params.delete("location");
+			const query = params.toString();
+			router.push(query ? `${pathname}?${query}` : pathname);
 		}
 		setLocOpen(false);
 	}

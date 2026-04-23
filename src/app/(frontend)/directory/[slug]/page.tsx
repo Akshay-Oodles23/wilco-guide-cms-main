@@ -105,6 +105,34 @@ function getBusinessLocation(business: any): string {
 	return "Location";
 }
 
+function normalizeCategoryLabel(category: string): string {
+	const value = (category || "").trim();
+	const lowerValue = value.toLowerCase();
+
+	// Handle common CMS misspellings for "restaurant"
+	if (
+		[
+			"restaurent",
+			"resturant",
+			"restraunt",
+			"restraurant",
+			"restuarant",
+			"restuarent",
+			"restaurents",
+		].includes(lowerValue)
+	) {
+		return "Restaurant";
+	}
+
+	return value || "Category";
+}
+
+function pluralizeCategoryLabel(category: string): string {
+	const value = (category || "").trim();
+	if (!value) return "Businesses";
+	return /s$/i.test(value) ? value : `${value}s`;
+}
+
 function formatReviewDate(date: string | Date): string {
 	const reviewDate = new Date(date);
 	const now = new Date();
@@ -181,11 +209,13 @@ export default async function BusinessDetailPage({ params }: Props) {
 
 	// Use CMS data or fallback to placeholders
 	const bizName = business?.name || "Business Name";
-	const bizCategory = business?.category
+	const rawBizCategory = business?.category
 		? typeof business.category === "object"
 			? business.category.name
 			: business.category
 		: "Category";
+	const bizCategory = normalizeCategoryLabel(rawBizCategory);
+	const relatedCategoryLabel = pluralizeCategoryLabel(bizCategory);
 	const bizDescription = business?.description || "No description available.";
 	const bizLocation =
 		getLocationName(business?.location || business?.address?.city) ||
@@ -367,7 +397,12 @@ export default async function BusinessDetailPage({ params }: Props) {
 							</svg>
 							Website
 						</a>
-						<button className='action-btn'>
+						<button
+							type='button'
+							className='action-btn action-btn-disabled'
+							disabled
+							aria-disabled='true'
+						>
 							<svg
 								width='14'
 								height='14'
@@ -380,7 +415,12 @@ export default async function BusinessDetailPage({ params }: Props) {
 							</svg>
 							Directions
 						</button>
-						<button className='action-btn'>
+						<button
+							type='button'
+							className='action-btn action-btn-disabled'
+							disabled
+							aria-disabled='true'
+						>
 							<svg
 								width='14'
 								height='14'
@@ -1167,7 +1207,7 @@ export default async function BusinessDetailPage({ params }: Props) {
 				{/* RELATED BUSINESSES */}
 				<div className='section-header-full'>
 					<h2 className='section-title-full'>
-						Other {bizCategory}s in {bizLocation.split(",")[0]}
+						Other {relatedCategoryLabel} in {bizLocation.split(",")[0]}
 					</h2>
 					<a
 						href='/directory'
