@@ -8,6 +8,7 @@ import "@/styles/job-detail.css";
 import { JobActionButtons } from "./JobActionButtons";
 import { ApplyButton } from "./ApplyButton";
 import { NewsletterSubscribeButton } from "./NewsletterSubscribeButton";
+import { JobReviews } from "./JobReviews";
 
 // Generate metadata for the job detail page
 export async function generateMetadata({
@@ -216,6 +217,20 @@ export default async function JobDetailPage({
 	}
 
 	const company = job.company || {};
+	const linkedBusiness =
+		job.business && typeof job.business === "object" ? job.business : null;
+	const businessReviews = Array.isArray(linkedBusiness?.reviews)
+		? linkedBusiness.reviews
+		: [];
+	const businessRating = Number(
+		linkedBusiness?.googleRating || linkedBusiness?.rating || 0,
+	);
+	const businessReviewCount = Number(
+		linkedBusiness?.googleReviewCount ||
+			linkedBusiness?.reviewCount ||
+			businessReviews.length ||
+			0,
+	);
 	const jobType = formatJobType(job.employmentType || job.jobType);
 	const jobTypeTag = getJobTypeTag(job.employmentType || job.jobType);
 	const salary = formatSalary(job.salary?.min, job.salary?.max);
@@ -475,6 +490,14 @@ export default async function JobDetailPage({
 								</h2>
 								<p>{company.description}</p>
 							</div>
+						) : null}
+
+						{linkedBusiness ? (
+							<JobReviews
+								initialReviews={businessReviews}
+								googleRating={businessRating}
+								googleReviewCount={businessReviewCount}
+							/>
 						) : null}
 
 						{/* BOTTOM APPLY */}

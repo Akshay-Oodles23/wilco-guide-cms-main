@@ -3,8 +3,10 @@
 import { getPayload } from "payload";
 import config from "@payload-config";
 import Link from "next/link";
+import { Fragment } from "react";
 import StarRating from "@/components/StarRating";
 import "@/styles/business-detail.css";
+import { BusinessReviews } from "./BusinessReviews";
 
 interface Props {
 	params: Promise<{
@@ -656,111 +658,12 @@ export default async function BusinessDetailPage({ params }: Props) {
 						</div>
 
 						{/* REVIEWS */}
-						<div className='widget'>
-							<div className='widget-header'>
-								<h2 className='widget-title'>Reviews</h2>
-							</div>
-							<div className='widget-body'>
-								<div className='reviews-summary'>
-									<div className='reviews-big-num'>
-										{bizRating}
-									</div>
-									<div>
-										<div className='reviews-stars-big'>
-											<StarRating
-												rating={bizRating}
-												size='md'
-											/>
-										</div>
-										<div className='reviews-count-text'>
-											Based on {bizReviewCount} Google
-											reviews
-										</div>
-									</div>
-								</div>
-								{bizReviews.length > 0 ? (
-									bizReviews.map(
-										(review: any, idx: number) => (
-											<div
-												key={idx}
-												className='review-item'
-											>
-												<div className='review-header'>
-													<div
-														className='review-avatar'
-														style={{
-															background:
-																getAvatarColor(
-																	idx,
-																),
-														}}
-													>
-														{getInitials(
-															review.author ||
-																"User",
-														)}
-													</div>
-													<span className='review-name'>
-														{review.author ||
-															"Anonymous"}
-													</span>
-													<span className='review-date'>
-														{review.date
-															? formatReviewDate(
-																	review.date,
-																)
-															: "Recently"}
-													</span>
-												</div>
-												<div className='review-stars'>
-													<StarRating
-														rating={
-															review.rating || 5
-														}
-														size='sm'
-													/>
-												</div>
-												<div className='review-text'>
-													{review.text ||
-														"Great experience at this business."}
-												</div>
-											</div>
-										),
-									)
-								) : (
-									<div className='review-item'>
-										<div className='review-header'>
-											<span className='review-name'>
-												No reviews yet
-											</span>
-										</div>
-										<div className='review-text'>
-											Be the first to review this
-											business!
-										</div>
-									</div>
-								)}
-							</div>
-							{bizReviews.length > 10 && (
-								<a
-									href='#'
-									className='reviews-see-all'
-								>
-									See all{" "}
-									{bizReviewCount -
-										Math.min(bizReviews.length, 10)}{" "}
-									more reviews →
-								</a>
-							)}
-							{bizReviews.length === 0 && bizReviewCount > 0 && (
-								<a
-									href='#'
-									className='reviews-see-all'
-								>
-									See all {bizReviewCount} reviews →
-								</a>
-							)}
-						</div>
+						<BusinessReviews
+							businessId={business?.id}
+							initialReviews={bizReviews}
+							googleRating={bizRating}
+							googleReviewCount={bizReviewCount}
+						/>
 					</div>
 
 					{/* SIDEBAR */}
@@ -874,28 +777,28 @@ export default async function BusinessDetailPage({ params }: Props) {
 												{ key: "fri", label: "Fri" },
 												{ key: "sat", label: "Sat" },
 												{ key: "sun", label: "Sun" },
-											].map((day) => {
-												const dayData =
-													bizHours[day.key];
-												const isToday = false; // You can add logic to detect today if needed
-												return (
-													<>
-														<span
-															className={`hours-day ${isToday ? "hours-today" : ""}`}
-														>
-															{day.label}
-														</span>
+												].map((day) => {
+													const dayData =
+														bizHours[day.key];
+													const isToday = false; // You can add logic to detect today if needed
+													return (
+														<Fragment key={day.key}>
+															<span
+																className={`hours-day ${isToday ? "hours-today" : ""}`}
+															>
+																{day.label}
+															</span>
 														<span
 															className={`hours-time ${isToday ? "hours-today" : ""}`}
 														>
 															{dayData?.open &&
-															dayData?.close
-																? `${dayData.open} – ${dayData.close}`
-																: "Closed"}
-														</span>
-													</>
-												);
-											})}
+																dayData?.close
+																	? `${dayData.open} – ${dayData.close}`
+																	: "Closed"}
+															</span>
+														</Fragment>
+													);
+												})}
 										</div>
 									</div>
 								</div>

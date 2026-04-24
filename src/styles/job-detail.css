@@ -367,6 +367,153 @@
   color: var(--blue);
 }
 
+.job-reviews-section {
+  overflow: hidden;
+}
+
+.job-reviews-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.job-reviews-header .job-section-title {
+  border-bottom: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.job-reviews-count {
+  background: var(--bg);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+}
+
+.reviews-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.reviews-big-num {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 40px;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.reviews-stars-big {
+  font-size: 18px;
+  color: var(--yellow);
+}
+
+.reviews-count-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.review-item {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.review-item:last-child {
+  border-bottom: none;
+}
+
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.review-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.review-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.review-date {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.review-stars {
+  color: var(--yellow);
+  margin-bottom: 4px;
+}
+
+.review-text {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.reviews-see-all {
+  display: block;
+  padding: 12px 18px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue);
+  text-decoration: none;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: var(--bg-white);
+}
+
+.reviews-see-all:hover {
+  background: var(--bg);
+  text-decoration: none;
+}
+
+.reviews-see-all-button {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin: 14px 0 0;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .job-reviews-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .review-header {
+    flex-wrap: wrap;
+  }
+
+  .review-date {
+    margin-left: 36px;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════
    BENEFITS GRID
    ═══════════════════════════════════════════════════════ */

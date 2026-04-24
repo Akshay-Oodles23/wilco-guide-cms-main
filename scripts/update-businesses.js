@@ -3,8 +3,48 @@
 const fs = require("fs");
 const path = require("path");
 
+function resolveDataPath() {
+	const preferredPath = path.join(__dirname, "../BUSINESS_DATA_COMPLETE.json");
+	if (fs.existsSync(preferredPath)) {
+		return preferredPath;
+	}
+
+	return path.join(__dirname, "../src/data/seniors/businesses.json");
+}
+
+function normalizeReview(review, index) {
+	if (!review) return null;
+
+	return {
+		author: review.author || review.author_name || "Anonymous",
+		text: review.text || review.review_text || "",
+		rating: Number(review.rating || 5),
+		date: review.date || new Date().toISOString(),
+		...(review.googleReviewId && {
+			googleReviewId: review.googleReviewId,
+		}),
+		...(!review.googleReviewId &&
+			review.author &&
+			review.date && {
+				googleReviewId: `${review.author}-${review.date}-${index}`,
+			}),
+	};
+}
+
+function getReviewsData(business) {
+	const reviewSource = Array.isArray(business.reviews)
+		? business.reviews
+		: Array.isArray(business.reviews_list)
+			? business.reviews_list
+			: [];
+
+	return reviewSource
+		.map(normalizeReview)
+		.filter((review) => review && review.text);
+}
+
 // Read the business data
-const dataPath = path.join(__dirname, "../BUSINESS_DATA_COMPLETE.json");
+const dataPath = resolveDataPath();
 const businessesData = JSON.parse(fs.readFileSync(dataPath, "utf-8"));
 
 const API_URL = "http://localhost:3000/api/businesses";
@@ -128,15 +168,7 @@ async function updateBusinesses() {
 				? business.amenities.map((amenity) => ({ amenity }))
 				: [];
 
-			// Transform reviews - ensure date is in YYYY-MM-DD format
-			const reviewsData = business.reviews
-				? business.reviews.map((review) => ({
-						author: review.author,
-						text: review.text,
-						rating: review.rating,
-						date: review.date,
-					}))
-				: [];
+			const reviewsData = getReviewsData(business);
 
 			// Build the update payload
 			const payload = {

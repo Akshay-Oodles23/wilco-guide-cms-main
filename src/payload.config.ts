@@ -9,6 +9,7 @@ import { Users } from "./collections/Users";
 import { Articles } from "./collections/Articles";
 import { Businesses } from "./collections/Businesses";
 import { Jobs } from "./collections/Jobs";
+import { JobReviews } from "./collections/JobReviews";
 import { Guides } from "./collections/Guides";
 import { Media } from "./collections/Media";
 import { Locations } from "./collections/Locations";
@@ -36,6 +37,7 @@ export default buildConfig({
 		Articles,
 		Businesses,
 		Jobs,
+		JobReviews,
 		Guides,
 		Media,
 		Locations,

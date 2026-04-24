@@ -10,8 +10,15 @@ interface LocationContextType {
 	source: "url" | "cookie" | "detection" | "default";
 }
 
-const LocationContext = createContext<LocationContextType | undefined>(
-	undefined,
+const defaultLocationContext: LocationContextType = {
+	selectedLocation: null,
+	setSelectedLocation: () => {},
+	isLoading: false,
+	source: "default",
+};
+
+const LocationContext = createContext<LocationContextType>(
+	defaultLocationContext,
 );
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
@@ -100,10 +107,5 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
 export function useLocationContext() {
 	const context = useContext(LocationContext);
-	if (context === undefined) {
-		throw new Error(
-			"useLocationContext must be used within LocationProvider",
-		);
-	}
 	return context;
 }

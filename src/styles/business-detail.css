@@ -851,6 +851,118 @@
   text-decoration: none;
 }
 
+.reviews-see-all-button {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin: 12px 0 0;
+  width: 100%;
+}
+
+.reviews-see-all-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.add-review-form {
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
+.add-review-title {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.add-review-grid {
+  display: grid;
+  grid-template-columns: 1fr 150px;
+  gap: 12px;
+}
+
+.add-review-form label {
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.add-review-form input,
+.add-review-form select,
+.add-review-form textarea {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.add-review-form textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.add-review-form input:focus,
+.add-review-form select:focus,
+.add-review-form textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  outline: none;
+}
+
+.add-review-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.add-review-actions button {
+  background: var(--blue);
+  border: 0;
+  border-radius: var(--radius-md);
+  color: #fff;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 10px 16px;
+}
+
+.add-review-actions button:hover {
+  background: #1d4ed8;
+}
+
+.add-review-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.add-review-actions span {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .add-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .add-review-actions button {
+    width: 100%;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════
    SIDEBAR — EVENTS
    ═══════════════════════════════════════════════════════ */
