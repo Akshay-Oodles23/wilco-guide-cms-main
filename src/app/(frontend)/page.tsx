@@ -728,7 +728,7 @@ async function HomePageContent({
 						</div>
 
 						{/* Upcoming Events List */}
-						<div className='events-list'>
+						<div className='events-list upcoming-muted'>
 							<div className='widget-header'>
 								<div className='widget-title'>Upcoming</div>
 								<Link

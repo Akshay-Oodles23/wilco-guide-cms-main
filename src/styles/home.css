@@ -572,6 +572,37 @@ a:hover {
   margin-bottom: 16px;
 }
 
+.events-list.upcoming-muted {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius-lg);
+  padding: 12px 12px 4px;
+}
+
+.events-list.upcoming-muted .widget-title,
+.events-list.upcoming-muted .widget-link {
+  color: #6b7280;
+}
+
+.events-list.upcoming-muted .event-row {
+  border-bottom-color: #d1d5db;
+}
+
+.events-list.upcoming-muted .er-date-box {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.events-list.upcoming-muted .er-month {
+  color: #9ca3af;
+}
+
+.events-list.upcoming-muted .er-day,
+.events-list.upcoming-muted .er-title,
+.events-list.upcoming-muted .er-time {
+  color: #6b7280;
+}
+
 .event-row {
   display: flex;
   align-items: flex-start;
